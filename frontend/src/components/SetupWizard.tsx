@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Check, Activity, Dumbbell } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ArrowRight, Check, Dumbbell } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 interface SetupWizardProps {
   onComplete: () => void;

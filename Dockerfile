@@ -1,31 +1,26 @@
-# Build stage
-FROM golang:1.22-alpine AS builder
+# Build Frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ .
+RUN npm run build
 
+# Build Backend
+FROM golang:1.26-alpine AS backend-builder
 WORKDIR /app
-
-# Install dependencies
 COPY go.mod go.sum ./
 RUN go mod download
-
-# Copy source code
 COPY . .
-
-# Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
 
 # Final stage
 FROM alpine:latest
-
 WORKDIR /root/
+# Copy binary
+COPY --from=backend-builder /app/server .
+# Copy built frontend from frontend-builder
+COPY --from=frontend-builder /frontend/dist ./static
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/server .
-
-# Copy the static frontend files
-COPY --from=builder /app/static ./static
-
-# Expose the port
 EXPOSE 8080
-
-# Command to run the executable
 CMD ["./server"]

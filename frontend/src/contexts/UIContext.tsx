@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { createContext, useContext, useState, ReactNode } from 'react';
+import { CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 type ToastType = 'success' | 'error' | 'info';
 

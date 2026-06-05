@@ -5,8 +5,8 @@ import {
   Activity, CalendarDays, TrendingUp, Search, Bell, 
   Settings, Dumbbell, FilePlus, User, Globe, ClipboardList, ChevronDown, Apple
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useUser } from '@/contexts/UserContext';
+import { cn } from '../lib/utils';
+import { useUser } from '../contexts/UserContext';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { t, i18n } = useTranslation();

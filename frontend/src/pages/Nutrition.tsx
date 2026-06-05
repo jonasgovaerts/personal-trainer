@@ -1,16 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Camera, ScanBarcode, Plus, Apple, CupSoda, Target, 
   Sparkles, Activity, X, Trash2, Calendar, ChevronLeft, ChevronRight 
 } from 'lucide-react';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
-import { useUI } from '@/contexts/UIContext';
-import { useUser } from '@/contexts/UserContext';
+import Layout from '../components/Layout';
+import { cn } from '../lib/utils';
+import { useUI } from '../contexts/UIContext';
+import { useUser } from '../contexts/UserContext';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, 
-  isSameDay, isToday, subMonths, addMonths, startOfDay 
+  isSameDay, isToday, subMonths, addMonths 
 } from 'date-fns';
 
 interface LogItem {
@@ -116,7 +116,6 @@ export default function Nutrition() {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [aiResult, setAiResult] = useState<{ name: string, caloriesPer100g: number, p: number, c: number, f: number } | null>(null);
-  const [aiGrams, setAiGrams] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -642,7 +641,6 @@ export default function Nutrition() {
               {monthDays.map(day => {
                 const dayCals = getDayCalories(day);
                 const isUnder = dayCals > 0 && dayCals <= goal;
-                const isOver = dayCals > goal;
                 const hasData = dayCals > 0;
 
                 return (

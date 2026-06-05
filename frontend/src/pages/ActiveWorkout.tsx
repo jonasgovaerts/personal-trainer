@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Check, Timer, Activity, ChevronLeft, ChevronRight, Repeat, LayoutList, Dumbbell, PlayCircle } from 'lucide-react';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
-import { useUI } from '@/contexts/UIContext';
+import Layout from '../components/Layout';
+import { cn } from '../lib/utils';
+import { useUI } from '../contexts/UIContext';
 
 interface Exercise {
   id: number;
