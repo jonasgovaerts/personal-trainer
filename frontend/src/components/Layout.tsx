@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
-  Activity, CalendarDays, TrendingUp, Search, Bell, 
-  Settings, Dumbbell, FilePlus, User, Globe, ClipboardList, ChevronDown, Apple, Menu, X
+  Activity, CalendarDays, TrendingUp, Search, 
+  Settings, Dumbbell, FilePlus, User, Globe, ClipboardList, Apple, Menu, X, Plus
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useUser } from '../contexts/UserContext';
