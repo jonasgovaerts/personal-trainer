@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CalendarDays, Activity, Dumbbell, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
-import { useUI } from '@/contexts/UIContext';
+import Layout from '../components/Layout';
+import { useUI } from '../contexts/UIContext';
 
 interface WorkoutLog {
   id: number;
@@ -112,7 +111,7 @@ export default function History() {
           </div>
         ) : (
           <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-800 before:to-transparent">
-            {history.map((workout, index) => {
+            {history.map((workout) => {
               const dateObj = workout.date ? parseISO(workout.date) : new Date();
               const isExpanded = expandedId === workout.id;
               const groupedLogs = getGroupedLogs(workout.Logs);

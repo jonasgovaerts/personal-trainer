@@ -3,11 +3,11 @@ import { ChevronRight, Dumbbell, Flame, Trophy, Apple, Activity } from 'lucide-r
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
+import Layout from '../components/Layout';
+import { cn } from '../lib/utils';
 import { format, parseISO } from 'date-fns';
-import { useUser } from '@/contexts/UserContext';
-import { useUI } from '@/contexts/UIContext';
+import { useUser } from '../contexts/UserContext';
+import { useUI } from '../contexts/UIContext';
 
 const volumeData = [
   { name: 'Mon', volume: 4000 },
@@ -139,7 +139,6 @@ export default function Dashboard() {
 
   const displayVolume = totalVolume > 0 ? `${totalVolume} kg` : "0 kg";
   const displayStreak = totalWorkouts > 0 ? "1 Day" : "0 Days";
-  const displayAdherence = totalWorkouts > 0 ? "100%" : "-";
 
   // Calculate today's nutrition
   const consumedCals = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.calories || 0), 0) : 0;

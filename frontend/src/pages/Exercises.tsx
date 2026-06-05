@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, Dumbbell, Target, Info, PlayCircle } from 'lucide-react';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
+import Layout from '../components/Layout';
 
 interface Exercise {
   id: number;

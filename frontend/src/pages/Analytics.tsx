@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
-  TrendingUp, Trophy, Dumbbell, Calendar, 
-  BarChart3, Target, Info, ChevronRight,
+  Trophy, Dumbbell, 
+  Target,
   ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie
+  ResponsiveContainer, BarChart, Bar, Cell
 } from 'recharts';
-import { format, parseISO, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from 'date-fns';
-import Layout from '@/components/Layout';
-import { useUser } from '@/contexts/UserContext';
-import { cn } from '@/lib/utils';
+import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
+import Layout from '../components/Layout';
+import { useUser } from '../contexts/UserContext';
+import { cn } from '../lib/utils';
 
 interface ExercisePR {
   name: string;
@@ -24,7 +24,6 @@ export default function Analytics() {
   const { t } = useTranslation();
   const { user } = useUser();
   const [history, setHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d');
 
   useEffect(() => {
@@ -32,11 +31,9 @@ export default function Analytics() {
       .then(res => res.json())
       .then(data => {
         setHistory(Array.isArray(data) ? data : []);
-        setLoading(false);
       })
       .catch(err => {
         console.error("Failed to fetch history:", err);
-        setLoading(false);
       });
   }, []);
 
@@ -275,7 +272,7 @@ export default function Analytics() {
                       contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }}
                     />
                     <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20}>
-                      {distribution.map((entry, index) => (
+                      {distribution.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={index === 0 ? '#3b82f6' : '#1e293b'} />
                       ))}
                     </Bar>

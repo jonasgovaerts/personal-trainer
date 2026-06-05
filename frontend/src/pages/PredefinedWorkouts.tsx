@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Play, Clock, Flame, Dumbbell } from 'lucide-react';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
+import Layout from '../components/Layout';
+import { cn } from '../lib/utils';
 
 // Mock data for predefined workouts
 const predefinedPlans = [
