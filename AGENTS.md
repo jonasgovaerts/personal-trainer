@@ -1,102 +1,125 @@
 # AI Implementation Guide: Ice Hockey Personal Trainer App
 
 ## 1. Project Overview
-This document serves as the master blueprint for an AI coding assistant to build a mobile-first web application. The app acts as a personal trainer specifically tailored for ice hockey players. 
+This document serves as the master blueprint for an AI coding assistant to build an enterprise-grade, mobile-first web application. The app acts as a personal trainer specifically tailored for ice hockey players, acting as a single-user dashboard for both physical training and nutrition tracking.
 
 **Core Value Proposition:**
 1. Focuses on hockey-specific physical development (explosiveness, core stability, lower-body power).
-2. Filters exercises based on the user's available home gym equipment.
-3. Tracks workout progress and ensures correct form.
+2. Intelligently filters exercises and predefined workout routines based on the user's available home gym equipment.
+3. Tracks workout progress (sets, reps, weight) via an interactive stepper interface.
+4. Integrates a Gemini AI-powered Nutrition Tracker to estimate calories and macros from photos and barcodes.
 
 ## 2. Tech Stack Requirements
-* **Backend:** Go (Golang) using standard library `net/http` or a lightweight router like `chi` or `gorilla/mux`.
-* **Frontend:** Vanilla HTML5, JavaScript (ES6+), and Tailwind CSS (via CDN for rapid prototyping, or configured via npm if a build step is preferred).
-* **Database:** PostgreSQL.
-* **Architecture:** Client-Server model. The frontend should communicate with the Go backend via RESTful JSON APIs.
+* **Backend:** Go (Golang) using standard library `net/http` router (Go 1.22+).
+* **Frontend:** React + TypeScript (Vite), Tailwind CSS, Framer Motion, Recharts, Lucide Icons, and React Router.
+* **Database:** PostgreSQL managed via GORM.
+* **Architecture:** Client-Server SPA model. The frontend communicates with the Go backend via RESTful JSON APIs.
+* **AI Integration:** Google Generative AI SDK (`gemini-2.5-flash` model).
 
 ---
 
 ## 3. Core Features & Functional Requirements
 
-### 3.1 User Profile & Equipment Inventory
-* **Profile:** Store user stats (e.g., current weight, height, primary hockey position, fitness goals).
-* **Equipment Selector:** A UI where users toggle the equipment they currently own (e.g., Dumbbells, Barbell, Resistance Bands, Kettlebells, Pull-up Bar, Bodyweight-only, Swiss Ball, Medicine Ball).
+### 3.1 Setup Wizard & User Profile
+* **Onboarding:** A multi-step setup wizard that captures Gender, Birth Date, Height, Current Weight, Target Weight, Activity Level, and Available Equipment.
+* **Dynamic Goals:** Uses the Mifflin-St Jeor equation to dynamically calculate BMR, TDEE, and personalized daily goals for Calories, Protein, Carbs, and Fat based on whether the user is cutting, maintaining, or bulking.
 
-### 3.2 Exercise Database (Hockey-Specific)
-* **Filtering:** The system must filter available exercises by the user's selected equipment.
-* **Data Structure:** Each exercise must include:
-    * Name (e.g., "Bulgarian Split Squats", "Medicine Ball Rotational Throws").
-    * Target Muscle Groups & Hockey Benefit (e.g., "Glutes/Quads - Improves skating stride power").
+### 3.2 Exercise Database & Equipment Filtering (Hockey-Specific)
+* **Intelligent Filtering:** The system must strictly filter available exercises by the user's selected equipment (using a `hasAny` logic: if an exercise supports Bodyweight OR Dumbbells, owning either unlocks it). "Bodyweight" is permanently assumed as available.
+* **Data Structure:** Each exercise includes:
+    * Name, Description, Hockey Benefit.
+    * `VideoURL` (YouTube) and `ImageURL`.
     * Required Equipment.
-    * Form Instructions (Step-by-step text description).
 
 ### 3.3 Workout Generation & Tracking
-* **Daily Workout:** Suggest a workout routine based on the user's profile and available equipment.
-* **Logging:** Users can log sets, reps, and weight used for each exercise.
-* **Progress Dashboard:** Visual representation of strength progression over time (e.g., increase in dumbbell weight used for lunges).
+* **Predefined Plans:** Categorized 1-hour routines (Full Body, Lower Body, Core, Upper Body) explicitly defining Sets, Reps, and Weight for each exercise. Plans are visibly disabled if the user lacks equipment.
+* **Custom Workout Builder:** A drag-and-drop interface (`framer-motion`) to build custom routines from the filtered exercise library.
+* **Active Session Stepper:** A guided, exercise-by-exercise interface. Supports "Standard Mode" (finish all sets per exercise) and "Circuit Mode" (looping 1 set per exercise). Includes inline auto-playing video tutorials.
+* **History Timeline:** A detailed, grouped timeline view of all completed past workouts.
+
+### 3.4 AI Nutrition Tracker
+* **Dashboard:** Tracks daily consumption of Calories, Protein, Carbs, and Fat against calculated goals using circular and linear progress bars.
+* **Meal Categories:** Logs are split into Breakfast, Lunch, Dinner, and Snacks.
+* **AI Camera/Barcode Scanner:** Utilizes HTML5 `navigator.mediaDevices` to capture webcam photos. Sends images to the Go backend where `gemini-2.5-flash` analyzes them:
+    * **Plate Mode:** Estimates TOTAL calories and macros for the whole meal.
+    * **Barcode Mode:** Estimates calories and macros per 100g, prompting the user to input grams for a dynamic calculation.
+* **Manual Entry & Deletion:** Users can manually log items and delete existing logs.
+
+### 3.5 Internationalization (i18n)
+* The entire React frontend is wrapped in `react-i18next`, supporting instantaneous switching between **English (en)** and **Dutch (nl)**.
 
 ---
 
-## 4. Database Schema (PostgreSQL)
+## 4. Database Schema (PostgreSQL via GORM)
 
-Please implement the following schema using raw SQL migrations or a Go ORM like GORM:
+```go
+// User represents a user in the application.
+type User struct {
+	ID             uint        `json:"id" gorm:"primarykey"`
+	Username       string      `json:"username" gorm:"unique;not null;size:50"`
+	Name           string      `json:"name" gorm:"size:100"`
+	Gender         string      `json:"gender" gorm:"size:20"`
+	BirthDate      string      `json:"birth_date" gorm:"size:20"`
+	Height         float64     `json:"height"`
+	CurrentWeight  float64     `json:"current_weight"`
+	TargetWeight   float64     `json:"target_weight"`
+	ActivityLevel  string      `json:"activity_level" gorm:"size:20"`
+	GoalCalories   int         `json:"goal_calories"`
+	GoalProtein    int         `json:"goal_protein"`
+	GoalCarbs      int         `json:"goal_carbs"`
+	GoalFat        int         `json:"goal_fat"`
+	HockeyPosition string      `json:"hockey_position" gorm:"size:50"`
+	CreatedAt      time.Time   `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
+	Equipment      []Equipment `json:"equipment,omitempty" gorm:"many2many:user_equipment;"`
+	Workouts       []Workout   `json:"workouts,omitempty"`
+}
 
-```sql
--- Users Table
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    hockey_position VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+type Equipment struct {
+	ID   uint   `json:"id" gorm:"primarykey"`
+	Name string `json:"name" gorm:"unique;not null;size:50"`
+}
 
--- Equipment Table (Lookup)
-CREATE TABLE equipment (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL
-);
+type Exercise struct {
+	ID            uint        `json:"id" gorm:"primarykey"`
+	Name          string      `json:"name" gorm:"not null;size:100"`
+	Description   string      `json:"description" gorm:"type:text"`
+	HockeyBenefit string      `json:"hockey_benefit" gorm:"type:text"`
+	VideoURL      string      `json:"video_url" gorm:"size:255"`
+	ImageURL      string      `json:"image_url" gorm:"size:255"`
+	Equipment     []Equipment `json:"equipment,omitempty" gorm:"many2many:exercise_equipment;"`
+}
 
--- User Equipment Mapping
-CREATE TABLE user_equipment (
-    user_id INT REFERENCES users(id),
-    equipment_id INT REFERENCES equipment(id),
-    PRIMARY KEY (user_id, equipment_id)
-);
+type Workout struct {
+	ID      uint         `json:"id" gorm:"primarykey"`
+	UserID  uint         `json:"user_id"`
+	Date    time.Time    `json:"date" gorm:"type:date;default:CURRENT_DATE"`
+	Notes   string       `json:"notes" gorm:"type:text"`
+	Logs    []WorkoutLog `json:"logs" gorm:"foreignKey:WorkoutID"`
+}
 
--- Exercises Table
-CREATE TABLE exercises (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    hockey_benefit TEXT,
-    video_url VARCHAR(255)
-);
+type WorkoutLog struct {
+	ID         uint      `json:"id" gorm:"primarykey"`
+	WorkoutID  uint      `json:"workout_id"`
+	ExerciseID uint      `json:"exercise_id"`
+	Exercise   Exercise  `json:"exercise" gorm:"foreignKey:ExerciseID"`
+	Sets       int       `json:"sets" gorm:"not null"`
+	Reps       int       `json:"reps" gorm:"not null"`
+	WeightKG   float64   `json:"weight_kg" gorm:"type:decimal(5,2)"`
+	Completed  bool      `json:"completed" gorm:"default:false"`
+}
 
--- Exercise Equipment Mapping (What equipment is needed for an exercise)
-CREATE TABLE exercise_equipment (
-    exercise_id INT REFERENCES exercises(id),
-    equipment_id INT REFERENCES equipment(id),
-    PRIMARY KEY (exercise_id, equipment_id)
-);
-
--- Workouts (Sessions)
-CREATE TABLE workouts (
-    id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(id),
-    date DATE DEFAULT CURRENT_DATE,
-    notes TEXT
-);
-
--- Workout Logs (Sets/Reps)
-CREATE TABLE workout_logs (
-    id SERIAL PRIMARY KEY,
-    workout_id INT REFERENCES workouts(id),
-    exercise_id INT REFERENCES exercises(id),
-    sets INT NOT NULL,
-    reps INT NOT NULL,
-    weight_kg DECIMAL(5,2),
-    completed BOOLEAN DEFAULT FALSE
-);
+type NutritionLog struct {
+	ID        uint      `json:"id" gorm:"primarykey"`
+	UserID    uint      `json:"user_id"`
+	Name      string    `json:"name" gorm:"not null"`
+	Calories  int       `json:"calories" gorm:"not null"`
+	Protein   float64   `json:"protein"`
+	Carbs     float64   `json:"carbs"`
+	Fat       float64   `json:"fat"`
+	Type      string    `json:"type" gorm:"size:20"` // 'food' or 'drink'
+	Meal      string    `json:"meal" gorm:"size:50"` // 'breakfast', 'lunch', etc.
+	Timestamp time.Time `json:"timestamp" gorm:"default:CURRENT_TIMESTAMP"`
+}
 ```
 
 ---
@@ -105,61 +128,42 @@ CREATE TABLE workout_logs (
 
 Implement the following RESTful endpoints:
 
-* **Users & Equipment:**
-* `GET /api/user/{id}` - Fetch user details.
+* **Users & Profile:**
+* `GET /api/user/{id}` - Fetch user details, goals, and equipment.
+* `PUT /api/user/{id}/profile` - Update user metrics and generated goals.
 * `PUT /api/user/{id}/equipment` - Update user's available equipment.
 
 
-* **Exercises:**
+* **Exercises & Equipment:**
+* `GET /api/equipment` - Fetch all equipment types.
 * `GET /api/exercises` - Fetch all exercises.
-* `GET /api/exercises?user_id={id}` - Fetch exercises filtered by the user's available equipment inventory.
+* `GET /api/exercises?user_id={id}` - Fetch exercises strictly filtered by the user's available equipment inventory (implicitly allows bodyweight).
 
 
 * **Workouts:**
 * `POST /api/workouts` - Create a new workout session.
 * `POST /api/workouts/{id}/log` - Add a set/rep log to a workout.
-* `GET /api/workouts/history?user_id={id}` - Get past workouts for progress tracking.
+* `GET /api/workouts/history?user_id={id}` - Get past workouts grouped by exercise.
+
+* **Nutrition & AI:**
+* `GET /api/nutrition?user_id={id}` - Fetch daily nutrition logs.
+* `POST /api/nutrition` - Save a new nutrition entry.
+* `DELETE /api/nutrition/{id}` - Delete a specific nutrition log.
+* `POST /api/nutrition/analyze?mode={barcode|plate}` - Send multipart image data to Gemini 2.5 Flash for JSON-formatted macro analysis.
 
 ---
 
 ## 6. Frontend UI/UX Guidelines
 
-* **Mobile-First:** Ensure the design using Tailwind CSS looks like a native mobile app. Use a bottom navigation bar for core tabs: `[Home/Dashboard]`, `[Exercises]`, `[Track Workout]`, `[Profile]`.
-* **Tailwind Styling:** Use clean, high-contrast UI suitable for gym environments. E.g., dark mode by default (`bg-gray-900`, `text-white`, `accent-blue-500`).
-* **Form Cues:** Include "Form Tips" cards that are easily expandable (accordion style) when a user is actively tracking an exercise so they can double-check their posture.
+* **Ultra-Premium Design:** The application must utilize a modern, dark-themed UI (slate-950 background) with glassmorphism/neumorphism elements, matching premium tools like WHOOP or Apple Fitness.
+* **Component Library:** Built with custom Tailwind classes and Lucide icons.
+* **Feedback Systems:** Custom `UIContext` handling non-blocking Toasts (`success`, `error`, `info`) and beautiful Confirmation Modals, replacing all native browser alerts.
+* **Responsiveness:** Sidebar navigation on desktop; flex/grid layouts must gracefully stack for mobile-first usage.
 
 ---
 
-## 7. Execution Instructions for AI Agent
+## 7. Deployment & Infrastructure
 
-**Phase 1: Project Setup & Database**
-
-1. Initialize Go module.
-2. Set up PostgreSQL connection (e.g., using `pgx` or `gorm`).
-3. Execute the SQL schema to create tables.
-4. Seed the database with 10-15 hockey-specific exercises (e.g., Skater Jumps, Cossack Squats, Paloff Press) and map them to their required equipment.
-
-**Phase 2: API Development**
-
-1. Build the Go HTTP server and define the routes.
-2. Implement handlers for CRUD operations on exercises, equipment, and workout tracking.
-3. Test API responses (return structured JSON).
-
-**Phase 3: Frontend Implementation**
-
-1. Create standard `index.html` structure.
-2. Link Tailwind CSS.
-3. Write vanilla JS to fetch data from the Go backend.
-4. Implement the Equipment Selector UI, the Exercise Library, and the Workout Tracker UI.
-
-**Phase 4: Refinement**
-
-1. Add basic error handling on the frontend (e.g., "Please select equipment first").
-2. Ensure the layout is responsive and mobile-friendly.
-
-**Phase 5: Deployment & Infrastructure**
-
-1. Create a `Dockerfile` to build the application into a container image.
-2. Create a GitHub Actions workflow to automatically build the Docker image for both `amd64` and `arm64` architectures.
-3. Push the multi-architecture image to a container registry.
-4. Create Kubernetes deployment manifests (YAML files) for both the application and the PostgreSQL database, including necessary Deployments, Services, and PersistentVolumeClaims.
+1. **Docker:** `Dockerfile` using multi-stage builds (golang builder -> alpine runtime) to compile the Go server and serve the Vite React static build (`/static`).
+2. **CI/CD:** GitHub Actions workflow to automatically build the Docker image for both `amd64` and `arm64` architectures, pushing to the GitHub Container Registry.
+3. **Kubernetes:** Manifests (`k8s/`) including Deployments, Services, and PersistentVolumeClaims for both the application and the PostgreSQL database. Includes a `Secret` for injecting the `GEMINI_API_KEY` environment variable.
