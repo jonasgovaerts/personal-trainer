@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: personal-trainer-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: personal-trainer
+  template:
+    metadata:
+      labels:
+        app: personal-trainer
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/USER/personal-trainer:latest # Replace USER with actual GitHub username
+          env:
+            - name: DB_HOST
+              value: "postgres" # References the Postgres service name
+            - name: DB_USER
+              value: "postgres"
+            - name: DB_PASSWORD
+              value: "postgres" # In production, use secrets
+            - name: DB_NAME
+              value: "personal_trainer"
+            - name: DB_PORT
+              value: "5432"
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: GEMINI_API_KEY
+          ports:
+            - containerPort: 8080
