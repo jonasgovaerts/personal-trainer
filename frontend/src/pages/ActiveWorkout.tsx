@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Check, Timer, Activity, ChevronLeft, ChevronRight, Repeat, LayoutList, Dumbbell, PlayCircle } from 'lucide-react';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
-import { useUI } from '@/contexts/UIContext';
+import Layout from '../components/Layout';
+import { cn } from '../lib/utils';
+import { useUI } from '../contexts/UIContext';
 
 interface Exercise {
   id: number;
@@ -321,10 +321,10 @@ export default function ActiveWorkout() {
             </div>
 
             {/* Exercise Details */}
-            <div className="flex-1 p-6 flex flex-col justify-center">
-              <h2 className="text-3xl font-bold text-white mb-2">{activeEx.exercise.name}</h2>
+            <div className="flex-1 p-5 lg:p-6 flex flex-col justify-center">
+              <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2">{activeEx.exercise.name}</h2>
               {activeEx.exercise.description && (
-                <p className="text-sm text-slate-400 leading-relaxed border-l-2 border-slate-700 pl-3">
+                <p className="text-xs lg:text-sm text-slate-400 leading-relaxed border-l-2 border-slate-700 pl-3">
                   {activeEx.exercise.description}
                 </p>
               )}
@@ -405,28 +405,28 @@ export default function ActiveWorkout() {
         </div>
 
         {/* Navigation Controls */}
-        <div className="flex items-center justify-between pt-4">
+        <div className="flex items-center justify-between pt-4 gap-4">
           <button
             onClick={handlePrev}
             disabled={currentExIdx === 0 && currentRound === 0}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-4 lg:px-6 py-3.5 rounded-xl font-semibold text-slate-300 bg-slate-900 hover:bg-slate-800 border border-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm lg:text-base"
           >
-            <ChevronLeft className="w-5 h-5" /> Previous
+            <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5" /> <span className="hidden sm:inline">Previous</span><span className="sm:hidden">Prev</span>
           </button>
 
           {isLastStep() ? (
             <button
               onClick={finishWorkout}
-              className="flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 transition-colors"
+              className="flex-[1.5] flex items-center justify-center gap-2 px-6 lg:px-8 py-3.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 transition-colors text-sm lg:text-base"
             >
-              <Check className="w-5 h-5" /> {t('active.finish')}
+              <Check className="w-4 h-4 lg:w-5 lg:h-5" /> {t('active.finish')}
             </button>
           ) : (
             <button
               onClick={handleNext}
-              className="flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-colors"
+              className="flex-[1.5] flex items-center justify-center gap-2 px-6 lg:px-8 py-3.5 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-colors text-sm lg:text-base"
             >
-              Next <ChevronRight className="w-5 h-5" />
+              Next <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5" />
             </button>
           )}
         </div>

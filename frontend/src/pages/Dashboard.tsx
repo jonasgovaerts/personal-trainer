@@ -3,11 +3,11 @@ import { ChevronRight, Dumbbell, Flame, Trophy, Apple, Activity } from 'lucide-r
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
+import Layout from '../components/Layout';
+import { cn } from '../lib/utils';
 import { format, parseISO } from 'date-fns';
-import { useUser } from '@/contexts/UserContext';
-import { useUI } from '@/contexts/UIContext';
+import { useUser } from '../contexts/UserContext';
+import { useUI } from '../contexts/UIContext';
 
 const volumeData = [
   { name: 'Mon', volume: 4000 },
@@ -139,7 +139,6 @@ export default function Dashboard() {
 
   const displayVolume = totalVolume > 0 ? `${totalVolume} kg` : "0 kg";
   const displayStreak = totalWorkouts > 0 ? "1 Day" : "0 Days";
-  const displayAdherence = totalWorkouts > 0 ? "100%" : "-";
 
   // Calculate today's nutrition
   const consumedCals = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.calories || 0), 0) : 0;
@@ -169,15 +168,15 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <StatCard title={t('dashboard.stats.workouts')} value={totalWorkouts.toString()} icon={<Dumbbell className="w-5 h-5 text-blue-500"/>} trend={totalWorkouts > 0 ? "+1" : "0"} positive={totalWorkouts > 0} />
-          <StatCard title={t('dashboard.stats.streak')} value={displayStreak} icon={<Flame className="w-5 h-5 text-orange-500"/>} trend={totalWorkouts > 0 ? t('dashboard.stats.streak.msg') : "Start training!"} />
-          <StatCard title={t('dashboard.stats.volume')} value={displayVolume} icon={<Trophy className="w-5 h-5 text-yellow-500"/>} trend={totalVolume > 0 ? "+Volume" : ""} positive={totalVolume > 0} />
-          <StatCard title="Today's Calories" value={`${consumedCals} kcal`} icon={<Apple className="w-5 h-5 text-emerald-500"/>} trend={`${goal - consumedCals} remaining`} positive={consumedCals <= goal} />
+          <StatCard title={t('dashboard.stats.streak')} value={displayStreak} icon={<Flame className="w-5 h-5 text-orange-500"/>} trend={totalWorkouts > 0 ? t('dashboard.stats.streak.msg') : "Start!"} />
+          <StatCard title={t('dashboard.stats.volume')} value={displayVolume} icon={<Trophy className="w-5 h-5 text-yellow-500"/>} trend={totalVolume > 0 ? "+Vol" : ""} positive={totalVolume > 0} />
+          <StatCard title="Today's KCAL" value={`${consumedCals}`} icon={<Apple className="w-5 h-5 text-emerald-500"/>} trend={`${goal - consumedCals} rem.`} positive={consumedCals <= goal} />
         </div>
 
         {/* Today's Nutrition Summary */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm cursor-pointer hover:border-slate-700 transition-colors" onClick={() => navigate('/nutrition')}>
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 lg:p-6 shadow-sm cursor-pointer hover:border-slate-700 transition-colors" onClick={() => navigate('/nutrition')}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-lg text-white flex items-center gap-2">
               <Apple className="w-5 h-5 text-emerald-500" />
@@ -186,23 +185,23 @@ export default function Dashboard() {
             <ChevronRight className="w-5 h-5 text-slate-500" />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
             <div className="flex flex-col justify-center">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Calories</span>
-              <div className="flex items-end gap-2">
-                <span className="text-2xl font-bold text-white">{consumedCals}</span>
-                <span className="text-sm font-medium text-slate-400 mb-1">/ {goal} kcal</span>
+              <div className="flex items-end gap-1.5">
+                <span className="text-xl lg:text-2xl font-bold text-white">{consumedCals}</span>
+                <span className="text-[10px] lg:text-sm font-medium text-slate-400 mb-1">/ {goal}</span>
               </div>
-              <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
+              <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
                 <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedCals / goal) * 100)}%` }} />
               </div>
             </div>
             
             <div className="flex flex-col justify-center">
               <span className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-1">Protein</span>
-              <div className="flex items-end gap-2">
-                <span className="text-xl font-bold text-white">{consumedP}g</span>
-                <span className="text-sm font-medium text-slate-400 mb-0.5">/ {proteinGoal}g</span>
+              <div className="flex items-end gap-1.5">
+                <span className="text-lg lg:text-xl font-bold text-white">{consumedP}g</span>
+                <span className="text-[10px] lg:text-sm font-medium text-slate-400 mb-0.5">/ {proteinGoal}g</span>
               </div>
               <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
                 <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedP / proteinGoal) * 100)}%` }} />
@@ -211,9 +210,9 @@ export default function Dashboard() {
 
             <div className="flex flex-col justify-center">
               <span className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-1">Carbs</span>
-              <div className="flex items-end gap-2">
-                <span className="text-xl font-bold text-white">{consumedC}g</span>
-                <span className="text-sm font-medium text-slate-400 mb-0.5">/ {carbsGoal}g</span>
+              <div className="flex items-end gap-1.5">
+                <span className="text-lg lg:text-xl font-bold text-white">{consumedC}g</span>
+                <span className="text-[10px] lg:text-sm font-medium text-slate-400 mb-0.5">/ {carbsGoal}g</span>
               </div>
               <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
                 <div className="h-full bg-orange-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedC / carbsGoal) * 100)}%` }} />
@@ -222,9 +221,9 @@ export default function Dashboard() {
 
             <div className="flex flex-col justify-center">
               <span className="text-xs font-bold text-red-500 uppercase tracking-wider mb-1">Fat</span>
-              <div className="flex items-end gap-2">
-                <span className="text-xl font-bold text-white">{consumedF}g</span>
-                <span className="text-sm font-medium text-slate-400 mb-0.5">/ {fatGoal}g</span>
+              <div className="flex items-end gap-1.5">
+                <span className="text-lg lg:text-xl font-bold text-white">{consumedF}g</span>
+                <span className="text-[10px] lg:text-sm font-medium text-slate-400 mb-0.5">/ {fatGoal}g</span>
               </div>
               <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
                 <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedF / fatGoal) * 100)}%` }} />
@@ -233,18 +232,18 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           
           {/* Volume Chart */}
-          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+          <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-4 lg:p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-lg text-white">{t('dashboard.chart.title')}</h3>
-              <select className="bg-slate-950 border border-slate-800 text-slate-300 text-sm rounded-lg px-3 py-1 focus:outline-none">
+              <select className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-1 focus:outline-none">
                 <option>{t('dashboard.chart.7days')}</option>
                 <option>{t('dashboard.chart.month')}</option>
               </select>
             </div>
-            <div className="h-72 w-full">
+            <div className="h-64 lg:h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
@@ -254,8 +253,8 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
                     itemStyle={{ color: '#e2e8f0' }}
@@ -267,12 +266,12 @@ export default function Dashboard() {
           </div>
 
           {/* Recent History */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 lg:p-6 shadow-sm flex flex-col">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-lg text-white">{t('dashboard.recent.title')}</h3>
               <button className="text-sm text-blue-500 hover:text-blue-400">{t('dashboard.recent.viewAll')}</button>
             </div>
-            <div className="flex-1 space-y-4 overflow-y-auto">
+            <div className="flex-1 space-y-4 overflow-y-auto max-h-80 lg:max-h-none">
               {loading ? (
                 <p className="text-slate-500 text-sm text-center py-4">{t('dashboard.recent.loading')}</p>
               ) : history.length === 0 ? (
@@ -351,15 +350,15 @@ export default function Dashboard() {
 
 function StatCard({ title, value, trend, positive, icon }: { title: string, value: string, trend: string, positive?: boolean, icon?: React.ReactNode }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm hover:border-slate-700 transition-colors cursor-pointer group">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 lg:p-5 shadow-sm hover:border-slate-700 transition-colors cursor-pointer group">
       <div className="flex items-center gap-2 mb-2">
         {icon}
-        <p className="text-sm font-medium text-slate-400">{title}</p>
+        <p className="text-[10px] lg:text-sm font-medium text-slate-400 uppercase tracking-wider">{title}</p>
       </div>
-      <div className="flex items-end justify-between">
-        <h4 className="text-3xl font-bold text-white tracking-tight">{value}</h4>
+      <div className="flex items-end justify-between gap-1">
+        <h4 className="text-xl lg:text-3xl font-bold text-white tracking-tight truncate">{value}</h4>
         <span className={cn(
-          "text-xs font-semibold px-2 py-1 rounded-md mb-1 whitespace-nowrap",
+          "text-[10px] lg:text-xs font-semibold px-1.5 py-0.5 lg:px-2 lg:py-1 rounded-md mb-1 whitespace-nowrap shrink-0",
           positive === undefined ? "bg-slate-800 text-slate-300" : positive ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
         )}>
           {trend}

@@ -1,16 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Camera, ScanBarcode, Plus, Apple, CupSoda, Target, 
   Sparkles, Activity, X, Trash2, Calendar, ChevronLeft, ChevronRight 
 } from 'lucide-react';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
-import { useUI } from '@/contexts/UIContext';
-import { useUser } from '@/contexts/UserContext';
+import Layout from '../components/Layout';
+import { cn } from '../lib/utils';
+import { useUI } from '../contexts/UIContext';
+import { useUser } from '../contexts/UserContext';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, 
-  isSameDay, isToday, subMonths, addMonths, startOfDay 
+  isSameDay, isToday, subMonths, addMonths 
 } from 'date-fns';
 
 interface LogItem {
@@ -116,7 +116,6 @@ export default function Nutrition() {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [aiResult, setAiResult] = useState<{ name: string, caloriesPer100g: number, p: number, c: number, f: number } | null>(null);
-  const [aiGrams, setAiGrams] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -346,64 +345,64 @@ export default function Nutrition() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Circular Progress */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center relative">
-                <div className="relative w-40 h-40 flex items-center justify-center">
+                <div className="relative w-32 h-32 lg:w-40 lg:h-40 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="40" className="text-slate-800 stroke-current" strokeWidth="8" fill="transparent" />
                     <circle cx="50" cy="50" r="40" className={cn("stroke-current transition-all duration-1000", remaining < 0 ? "text-red-500" : "text-emerald-500")} strokeWidth="8" fill="transparent" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * progressPercent) / 100} />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-bold text-white">{consumed}</span>
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">KCAL</span>
+                    <span className="text-2xl lg:text-3xl font-bold text-white">{consumed}</span>
+                    <span className="text-[10px] lg:text-xs font-semibold text-slate-500 uppercase tracking-wider">KCAL</span>
                   </div>
                 </div>
-                
-                <div className="mt-6 w-full flex justify-between text-center px-4">
+
+                <div className="mt-6 w-full flex justify-between text-center px-2 lg:px-4">
                   <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase">{t('nutrition.goal')}</p>
+                    <p className="text-[10px] lg:text-xs font-semibold text-slate-500 uppercase">{t('nutrition.goal')}</p>
                     <div className="flex items-center justify-center gap-1 mt-1">
                       <Target className="w-3 h-3 text-blue-500" />
                       <input 
                         type="number" 
                         value={goal}
                         onChange={(e) => setGoal(parseInt(e.target.value) || 0)}
-                        className="w-16 bg-transparent text-white font-bold text-lg text-center focus:outline-none border-b border-dashed border-slate-600 focus:border-blue-500"
+                        className="w-12 lg:w-16 bg-transparent text-white font-bold text-base lg:text-lg text-center focus:outline-none border-b border-dashed border-slate-600 focus:border-blue-500"
                       />
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase">{t('nutrition.remaining')}</p>
-                    <p className={cn("font-bold text-lg mt-1", remaining < 0 ? "text-red-500" : "text-emerald-500")}>
-                      {Math.abs(remaining)} {remaining < 0 && 'over'}
+                    <p className="text-[10px] lg:text-xs font-semibold text-slate-500 uppercase">{t('nutrition.remaining')}</p>
+                    <p className={cn("font-bold text-base lg:text-lg mt-1", remaining < 0 ? "text-red-500" : "text-emerald-500")}>
+                      {Math.abs(remaining)}
                     </p>
                   </div>
                 </div>
 
                 {/* Macros Section */}
-                <div className="mt-8 w-full space-y-4 px-2">
-                  <div>
-                    <div className="flex justify-between text-xs font-bold uppercase mb-1">
-                      <span className="text-blue-500">Protein</span>
-                      <span className="text-slate-400">{consumedP} / {proteinGoal}g</span>
+                <div className="mt-8 w-full grid grid-cols-3 lg:grid-cols-1 gap-4 lg:space-y-4 px-1 lg:px-2">
+                  <div className="text-center lg:text-left">
+                    <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
+                      <span className="text-blue-500">Prot</span>
+                      <span className="text-slate-400">{consumedP}g</span>
                     </div>
-                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedP / proteinGoal) * 100)}%` }} />
                     </div>
                   </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-bold uppercase mb-1">
+                  <div className="text-center lg:text-left">
+                    <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
                       <span className="text-orange-500">Carbs</span>
-                      <span className="text-slate-400">{consumedC} / {carbsGoal}g</span>
+                      <span className="text-slate-400">{consumedC}g</span>
                     </div>
-                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-orange-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedC / carbsGoal) * 100)}%` }} />
                     </div>
                   </div>
-                  <div>
-                    <div className="flex justify-between text-xs font-bold uppercase mb-1">
+                  <div className="text-center lg:text-left">
+                    <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
                       <span className="text-emerald-500">Fat</span>
-                      <span className="text-slate-400">{consumedF} / {fatGoal}g</span>
+                      <span className="text-slate-400">{consumedF}g</span>
                     </div>
-                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedF / fatGoal) * 100)}%` }} />
                     </div>
                   </div>
@@ -431,21 +430,21 @@ export default function Nutrition() {
                 <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mb-6 shrink-0">
                   <button
                     onClick={() => setActiveTab('manual')}
-                    className={cn("flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all", activeTab === 'manual' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
+                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 rounded-lg text-xs lg:text-sm font-semibold transition-all", activeTab === 'manual' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
                   >
-                    <Plus className="w-4 h-4" /> {t('nutrition.tab.manual')}
+                    <Plus className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> {t('nutrition.tab.manual')}
                   </button>
                   <button
                     onClick={() => setActiveTab('ai')}
-                    className={cn("flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all", activeTab === 'ai' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
+                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 rounded-lg text-xs lg:text-sm font-semibold transition-all", activeTab === 'ai' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
                   >
-                    <Camera className="w-4 h-4" /> {t('nutrition.tab.camera')}
+                    <Camera className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> {t('nutrition.tab.camera')}
                   </button>
                   <button
                     onClick={() => setActiveTab('barcode')}
-                    className={cn("flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all", activeTab === 'barcode' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
+                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 rounded-lg text-xs lg:text-sm font-semibold transition-all", activeTab === 'barcode' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
                   >
-                    <ScanBarcode className="w-4 h-4" /> {t('nutrition.tab.barcode')}
+                    <ScanBarcode className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> {t('nutrition.tab.barcode')}
                   </button>
                 </div>
 
@@ -453,64 +452,64 @@ export default function Nutrition() {
                 <div className="flex-1 flex flex-col justify-center">
                   {activeTab === 'manual' && (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-5 gap-4">
-                        <div className="col-span-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+                        <div className="sm:col-span-3">
                           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('nutrition.manual.name')}</label>
                           <input 
                             type="text" 
                             value={manualName}
                             onChange={e => setManualName(e.target.value)}
-                            placeholder="e.g. Chicken Breast"
-                            className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500"
+                            placeholder="e.g. Chicken"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500"
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div className="sm:col-span-2">
                           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('nutrition.manual.calories')}</label>
                           <input 
                             type="number" 
                             value={manualCal}
                             onChange={e => setManualCal(e.target.value)}
                             placeholder="0"
-                            className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500"
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500"
                           />
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <label className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-1 block">Protein (g)</label>
+                          <label className="text-[10px] lg:text-xs font-bold text-blue-500 uppercase tracking-wider mb-1 block">Prot (g)</label>
                           <input 
                             type="number" 
                             value={manualP}
                             onChange={e => setManualP(e.target.value)}
                             placeholder="0"
-                            className="w-full bg-slate-950 border border-blue-900/50 rounded-xl p-3 text-white focus:outline-none focus:border-blue-500"
+                            className="w-full bg-slate-950 border border-blue-900/50 rounded-xl p-2.5 lg:p-3 text-sm text-white focus:outline-none focus:border-blue-500"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-1 block">Carbs (g)</label>
+                          <label className="text-[10px] lg:text-xs font-bold text-orange-500 uppercase tracking-wider mb-1 block">Carb (g)</label>
                           <input 
                             type="number" 
                             value={manualC}
                             onChange={e => setManualC(e.target.value)}
                             placeholder="0"
-                            className="w-full bg-slate-950 border border-orange-900/50 rounded-xl p-3 text-white focus:outline-none focus:border-orange-500"
+                            className="w-full bg-slate-950 border border-orange-900/50 rounded-xl p-2.5 lg:p-3 text-sm text-white focus:outline-none focus:border-orange-500"
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1 block">Fat (g)</label>
+                          <label className="text-[10px] lg:text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1 block">Fat (g)</label>
                           <input 
                             type="number" 
                             value={manualF}
                             onChange={e => setManualF(e.target.value)}
                             placeholder="0"
-                            className="w-full bg-slate-950 border border-emerald-900/50 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500"
+                            className="w-full bg-slate-950 border border-emerald-900/50 rounded-xl p-2.5 lg:p-3 text-sm text-white focus:outline-none focus:border-emerald-500"
                           />
                         </div>
                       </div>
                       <button 
                         onClick={handleManualAdd}
                         disabled={!manualName || !manualCal}
-                        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors"
+                        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm lg:text-base uppercase tracking-wider"
                       >
                         {t('nutrition.add')}
                       </button>
@@ -636,43 +635,41 @@ export default function Nutrition() {
               
               {/* Padding for start of month */}
               {Array.from({ length: startOfMonth(currentMonth).getDay() }).map((_, i) => (
-                <div key={`pad-${i}`} className="h-24" />
+                <div key={`pad-${i}`} className="h-16 lg:h-24" />
               ))}
 
               {monthDays.map(day => {
                 const dayCals = getDayCalories(day);
                 const isUnder = dayCals > 0 && dayCals <= goal;
-                const isOver = dayCals > goal;
                 const hasData = dayCals > 0;
 
                 return (
                   <div 
                     key={day.toString()} 
                     className={cn(
-                      "h-24 rounded-xl border p-2 flex flex-col justify-between transition-all",
+                      "h-16 lg:h-24 rounded-xl border p-1 lg:p-2 flex flex-col justify-between transition-all",
                       isToday(day) ? "border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/20" : "border-slate-800 bg-slate-950/50",
                       hasData && "hover:border-slate-600"
                     )}
                   >
-                    <span className={cn("text-xs font-bold", isToday(day) ? "text-blue-400" : "text-slate-500")}>
+                    <span className={cn("text-[10px] lg:text-xs font-bold", isToday(day) ? "text-blue-400" : "text-slate-500")}>
                       {format(day, 'd')}
                     </span>
                     
                     {hasData ? (
-                      <div className="space-y-1">
+                      <div className="space-y-0.5 lg:space-y-1">
                         <div className={cn(
-                          "px-1.5 py-0.5 rounded text-[10px] font-bold text-center",
+                          "px-1 py-0.5 rounded text-[8px] lg:text-[10px] font-bold text-center leading-none",
                           isUnder ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
                         )}>
-                          {dayCals} kcal
+                          {dayCals}
                         </div>
-                        <div className="flex justify-center gap-0.5">
-                           {/* Adherence Dots */}
-                           <div className={cn("w-1.5 h-1.5 rounded-full", isUnder ? "bg-emerald-500" : "bg-red-500")} />
+                        <div className="flex justify-center">
+                           <div className={cn("w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full", isUnder ? "bg-emerald-500" : "bg-red-500")} />
                         </div>
                       </div>
                     ) : (
-                      <div className="h-4" />
+                      <div className="h-2 lg:h-4" />
                     )}
                   </div>
                 );

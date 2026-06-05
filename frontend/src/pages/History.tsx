@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CalendarDays, Activity, Dumbbell, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
-import { useUI } from '@/contexts/UIContext';
+import Layout from '../components/Layout';
+import { useUI } from '../contexts/UIContext';
 
 interface WorkoutLog {
   id: number;
@@ -111,8 +110,8 @@ export default function History() {
             <p className="text-sm mt-1">{t('history.empty.subtitle')}</p>
           </div>
         ) : (
-          <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-800 before:to-transparent">
-            {history.map((workout, index) => {
+          <div className="space-y-4 lg:space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-800 before:to-transparent">
+            {history.map((workout) => {
               const dateObj = workout.date ? parseISO(workout.date) : new Date();
               const isExpanded = expandedId === workout.id;
               const groupedLogs = getGroupedLogs(workout.Logs);
@@ -126,54 +125,54 @@ export default function History() {
                   </div>
                   
                   {/* Card */}
-                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl shadow-sm transition-all overflow-hidden">
+                  <div className="w-[calc(100%-3.5rem)] md:w-[calc(50%-2.5rem)] bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl shadow-sm transition-all overflow-hidden">
                     <div 
-                      className="p-5 cursor-pointer flex justify-between items-start"
+                      className="p-4 lg:p-5 cursor-pointer flex justify-between items-start"
                       onClick={() => toggleExpand(workout.id)}
                     >
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-blue-500 uppercase tracking-wider bg-blue-500/10 px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider bg-blue-500/10 px-2 py-0.5 rounded">
                             {format(dateObj, 'MMM d, yyyy')}
                           </span>
                         </div>
-                        <h3 className="text-lg font-bold text-white leading-tight">
+                        <h3 className="text-base lg:text-lg font-bold text-white leading-tight truncate">
                           {workout.notes || t('dashboard.recent.routine')}
                         </h3>
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-[10px] lg:text-xs text-slate-500 mt-1">
                           {totalSets} {t('history.setsCompleted')} • {groupedLogs.length} {t('history.exercises')}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 lg:gap-3 shrink-0 ml-2">
                         <div className="text-slate-500 bg-slate-800/50 p-1.5 rounded-full shrink-0">
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </div>
                         <button 
                           onClick={(e) => handleDelete(e, workout.id)}
                           className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors shrink-0"
                           title={t('common.delete') || 'Verwijderen'}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
 
                     {/* Expanded Details */}
                     {isExpanded && (
-                      <div className="px-5 pb-5 pt-2 border-t border-slate-800/50 bg-slate-950/30">
+                      <div className="px-4 lg:px-5 pb-5 pt-2 border-t border-slate-800/50 bg-slate-950/30">
                         {groupedLogs.length === 0 ? (
                           <p className="text-sm text-slate-500 italic">{t('history.noLogs')}</p>
                         ) : (
                           <div className="space-y-4">
                             {groupedLogs.map((group, gIdx) => (
                               <div key={gIdx}>
-                                <h4 className="text-sm font-semibold text-slate-300 mb-2">{group.name}</h4>
+                                <h4 className="text-xs lg:text-sm font-semibold text-slate-300 mb-2">{group.name}</h4>
                                 <div className="grid grid-cols-1 gap-1.5 pl-2 border-l border-slate-700">
                                   {group.sets.map((set, sIdx) => (
-                                    <div key={sIdx} className="flex items-center gap-3 text-xs text-slate-400">
-                                      <span className="w-12 font-medium text-slate-500">Set {sIdx + 1}</span>
-                                      <span className="w-16 bg-slate-800 px-2 py-0.5 rounded text-center text-slate-300">{set.weight} kg</span>
-                                      <span className="w-16 bg-slate-800 px-2 py-0.5 rounded text-center text-slate-300">{set.reps} reps</span>
+                                    <div key={sIdx} className="flex items-center gap-3 text-[10px] lg:text-xs text-slate-400">
+                                      <span className="w-10 lg:w-12 font-medium text-slate-500">Set {sIdx + 1}</span>
+                                      <span className="w-14 lg:w-16 bg-slate-800 px-2 py-0.5 rounded text-center text-slate-300">{set.weight} kg</span>
+                                      <span className="w-14 lg:w-16 bg-slate-800 px-2 py-0.5 rounded text-center text-slate-300">{set.reps} reps</span>
                                     </div>
                                   ))}
                                 </div>

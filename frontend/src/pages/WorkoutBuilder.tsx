@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Reorder } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { GripVertical, Plus, Search, Dumbbell, Save, Clock, Target, Trash2 } from 'lucide-react';
-import Layout from '@/components/Layout';
-import { useUI } from '@/contexts/UIContext';
+import Layout from '../components/Layout';
+import { useUI } from '../contexts/UIContext';
 
 interface Exercise {
   id: number;

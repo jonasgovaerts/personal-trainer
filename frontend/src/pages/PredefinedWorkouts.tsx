@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Play, Clock, Flame, Dumbbell } from 'lucide-react';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
+import Layout from '../components/Layout';
+import { cn } from '../lib/utils';
 
 // Mock data for predefined workouts
 const predefinedPlans = [
@@ -212,7 +212,7 @@ export default function PredefinedWorkouts() {
               <p>No plans available.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 pb-8">
               {filteredPlans.map(plan => {
                 // Check if user has all required exercises for this plan
                 const hasEquipment = plan.exercises.every(ex => availableExercises.includes(ex.name.toLowerCase()));

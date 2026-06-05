@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Activity, Target, Settings, RotateCcw, Dumbbell, Save } from 'lucide-react';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
-import { useUI } from '@/contexts/UIContext';
-import { useUser } from '@/contexts/UserContext';
+import { User, Target, Settings, RotateCcw, Dumbbell, Save } from 'lucide-react';
+import Layout from '../components/Layout';
+import { cn } from '../lib/utils';
+import { useUI } from '../contexts/UIContext';
+import { useUser } from '../contexts/UserContext';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -117,34 +117,30 @@ export default function Profile() {
                 <User className="w-5 h-5 text-blue-500" />
                 {t('profile.personalInfo')}
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 lg:gap-6">
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('wizard.name')}</p>
-                  <p className="text-lg font-medium text-white">{userName}</p>
+                  <p className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('wizard.name')}</p>
+                  <p className="text-base lg:text-lg font-medium text-white truncate">{userName}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.gender')}</p>
-                  <p className="text-lg font-medium text-white capitalize">{t(`profile.gender.${profile.gender}`)}</p>
+                  <p className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.gender')}</p>
+                  <p className="text-base lg:text-lg font-medium text-white capitalize">{t(`profile.gender.${profile.gender}`)}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.age')}</p>
-                  <p className="text-lg font-medium text-white">{calculateAge(profile.birthDate)} ({profile.birthDate})</p>
+                  <p className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.age')}</p>
+                  <p className="text-base lg:text-lg font-medium text-white">{calculateAge(profile.birthDate)}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.height')}</p>
-                  <p className="text-lg font-medium text-white">{profile.height} cm</p>
+                  <p className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.height')}</p>
+                  <p className="text-base lg:text-lg font-medium text-white">{profile.height} cm</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.currentWeight')}</p>
-                  <p className="text-lg font-medium text-white">{profile.currentWeight} kg</p>
+                  <p className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.currentWeight')}</p>
+                  <p className="text-base lg:text-lg font-medium text-white">{profile.currentWeight} kg</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.targetWeight')}</p>
-                  <p className="text-lg font-medium text-white">{profile.targetWeight} kg</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.activityLevel')}</p>
-                  <p className="text-lg font-medium text-white">{profile.activityLevel}</p>
+                  <p className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.targetWeight')}</p>
+                  <p className="text-base lg:text-lg font-medium text-white">{profile.targetWeight} kg</p>
                 </div>
               </div>
             </div>
@@ -154,22 +150,22 @@ export default function Profile() {
                 <Target className="w-5 h-5 text-emerald-500" />
                 {t('profile.nutritionGoals')}
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 <div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.calories')}</p>
-                  <p className="text-xl font-bold text-white">{goals.calories} <span className="text-sm font-normal text-slate-400">kcal</span></p>
+                  <p className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t('profile.calories')}</p>
+                  <p className="text-lg lg:text-xl font-bold text-white">{goals.calories} <span className="text-[10px] lg:text-sm font-normal text-slate-400">kcal</span></p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-1">{t('profile.protein')}</p>
-                  <p className="text-xl font-bold text-white">{goals.protein} <span className="text-sm font-normal text-slate-400">g</span></p>
+                  <p className="text-[10px] lg:text-xs font-bold text-blue-500 uppercase tracking-wider mb-1">{t('profile.protein')}</p>
+                  <p className="text-lg lg:text-xl font-bold text-white">{goals.protein} <span className="text-[10px] lg:text-sm font-normal text-slate-400">g</span></p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-1">{t('profile.carbs')}</p>
-                  <p className="text-xl font-bold text-white">{goals.carbs} <span className="text-sm font-normal text-slate-400">g</span></p>
+                  <p className="text-[10px] lg:text-xs font-bold text-orange-500 uppercase tracking-wider mb-1">{t('profile.carbs')}</p>
+                  <p className="text-lg lg:text-xl font-bold text-white">{goals.carbs} <span className="text-[10px] lg:text-sm font-normal text-slate-400">g</span></p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1">{t('profile.fat')}</p>
-                  <p className="text-xl font-bold text-white">{goals.fat} <span className="text-sm font-normal text-slate-400">g</span></p>
+                  <p className="text-[10px] lg:text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1">{t('profile.fat')}</p>
+                  <p className="text-lg lg:text-xl font-bold text-white">{goals.fat} <span className="text-[10px] lg:text-sm font-normal text-slate-400">g</span></p>
                 </div>
               </div>
             </div>

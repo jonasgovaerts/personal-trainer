@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, Dumbbell, Target, Info, PlayCircle } from 'lucide-react';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
+import Layout from '../components/Layout';
 
 interface Exercise {
   id: number;
@@ -105,7 +104,7 @@ function ExerciseCard({ exercise, t }: { exercise: Exercise, t: any }) {
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col sm:flex-row group transition-all hover:border-slate-700">
       {/* Sketch / Illustration Area */}
-      <div className="w-full sm:w-48 h-48 sm:h-auto bg-slate-800/50 flex flex-col items-center justify-center p-0 border-b sm:border-b-0 sm:border-r border-slate-800 relative overflow-hidden shrink-0">
+      <div className="w-full sm:w-48 h-40 sm:h-auto bg-slate-800/50 flex flex-col items-center justify-center p-0 border-b sm:border-b-0 sm:border-r border-slate-800 relative overflow-hidden shrink-0">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none z-10" />
         
         {isPlaying && embedUrl ? (
@@ -122,7 +121,7 @@ function ExerciseCard({ exercise, t }: { exercise: Exercise, t: any }) {
               <img src={exercise.image_url} alt={exercise.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
             ) : (
               <div className="p-6 flex flex-col items-center justify-center">
-                <Dumbbell className="w-16 h-16 text-slate-700 mb-3 group-hover:scale-110 transition-transform duration-500" />
+                <Dumbbell className="w-12 h-12 lg:w-16 lg:h-16 text-slate-700 mb-3 group-hover:scale-110 transition-transform duration-500" />
                 <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 text-center">
                   {t('exercises.illustration')}
                 </p>
@@ -132,9 +131,9 @@ function ExerciseCard({ exercise, t }: { exercise: Exercise, t: any }) {
             {exercise.video_url && (
               <button 
                 onClick={() => setIsPlaying(true)}
-                className="absolute bottom-4 flex items-center gap-1.5 text-xs font-semibold text-white hover:text-blue-200 bg-blue-600/80 hover:bg-blue-600 px-3 py-1.5 rounded-full transition-colors z-20 backdrop-blur-sm cursor-pointer"
+                className="absolute bottom-3 flex items-center gap-1.5 text-[10px] lg:text-xs font-semibold text-white hover:text-blue-200 bg-blue-600/80 hover:bg-blue-600 px-2.5 py-1.5 rounded-full transition-colors z-20 backdrop-blur-sm cursor-pointer"
               >
-                <PlayCircle className="w-4 h-4" />
+                <PlayCircle className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                 {t('exercises.watchVideo')}
               </button>
             )}
@@ -143,29 +142,29 @@ function ExerciseCard({ exercise, t }: { exercise: Exercise, t: any }) {
       </div>
 
       {/* Details Area */}
-      <div className="p-6 flex-1 flex flex-col">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-xl font-bold text-white">{exercise.name}</h3>
-          <span className="bg-slate-800 text-slate-300 text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md shrink-0 ml-4">
+      <div className="p-5 lg:p-6 flex-1 flex flex-col">
+        <div className="flex justify-between items-start mb-2 gap-2">
+          <h3 className="text-lg lg:text-xl font-bold text-white leading-tight">{exercise.name}</h3>
+          <span className="bg-slate-800 text-slate-300 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md shrink-0">
             {equipmentList}
           </span>
         </div>
         
-        <div className="flex items-start gap-2 mb-4 bg-blue-500/5 p-3 rounded-xl border border-blue-500/10">
-          <Target className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 mb-3 lg:mb-4 bg-blue-500/5 p-2.5 lg:p-3 rounded-xl border border-blue-500/10">
+          <Target className="w-4 h-4 lg:w-5 lg:h-5 text-blue-500 shrink-0 mt-0.5" />
           <div>
-            <span className="text-xs font-bold text-blue-400 uppercase tracking-wider block mb-0.5">{t('exercises.benefit')}</span>
-            <p className="text-sm text-slate-300 leading-snug">{exercise.hockey_benefit}</p>
+            <span className="text-[10px] lg:text-xs font-bold text-blue-400 uppercase tracking-wider block mb-0.5">{t('exercises.benefit')}</span>
+            <p className="text-xs lg:text-sm text-slate-300 leading-snug">{exercise.hockey_benefit}</p>
           </div>
         </div>
 
         <div className="flex-1">
           <div className="flex items-center gap-1.5 mb-2">
-            <Info className="w-4 h-4 text-slate-500" />
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('exercises.instructions')}</span>
+            <Info className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-slate-500" />
+            <span className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider">{t('exercises.instructions')}</span>
           </div>
-          <p className="text-sm text-slate-400 leading-relaxed pl-5 relative">
-            <span className="absolute left-1 top-1.5 w-1.5 h-1.5 rounded-full bg-slate-700" />
+          <p className="text-xs lg:text-sm text-slate-400 leading-relaxed pl-4 lg:pl-5 relative">
+            <span className="absolute left-0 lg:left-1 top-1.5 w-1.5 h-1.5 rounded-full bg-slate-700" />
             {exercise.description}
           </p>
         </div>
