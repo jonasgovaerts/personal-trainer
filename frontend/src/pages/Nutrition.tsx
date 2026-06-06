@@ -164,9 +164,10 @@ export default function Nutrition() {
           );
 
           scanner.render((decodedText) => {
-            handleBarcodeLookup(decodedText);
+            setBarcodeInput(decodedText);
             scanner?.clear();
             setIsCameraOpen(false);
+            toast('Barcode captured! Click Lookup to search.', 'info');
           }, (_error) => {
             // scan error
           });
