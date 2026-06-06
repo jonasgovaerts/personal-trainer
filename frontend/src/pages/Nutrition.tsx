@@ -152,22 +152,32 @@ export default function Nutrition() {
   // --- Barcode Scanner Logic ---
   useEffect(() => {
     let scanner: Html5QrcodeScanner | null = null;
-    if (activeTab === 'barcode' && isCameraOpen) {
-      scanner = new Html5QrcodeScanner(
-        "reader", 
-        { fps: 10, qrbox: { width: 250, height: 150 } }, 
-        /* verbose= */ false
-      );
+    
+    // Use a small delay to ensure the DOM element "reader" is painted
+    const timeoutId = setTimeout(() => {
+      if (activeTab === 'barcode' && isCameraOpen) {
+        try {
+          scanner = new Html5QrcodeScanner(
+            "reader", 
+            { fps: 10, qrbox: { width: 250, height: 150 } }, 
+            /* verbose= */ false
+          );
 
-      scanner.render((decodedText) => {
-        handleBarcodeLookup(decodedText);
-        scanner?.clear();
-        setIsCameraOpen(false);
-      }, (_error) => {
-        // scan error
-      });
-    }
+          scanner.render((decodedText) => {
+            handleBarcodeLookup(decodedText);
+            scanner?.clear();
+            setIsCameraOpen(false);
+          }, (_error) => {
+            // scan error
+          });
+        } catch (e) {
+          console.error("Scanner initialization failed", e);
+        }
+      }
+    }, 100);
+
     return () => {
+      clearTimeout(timeoutId);
       if (scanner) {
         scanner.clear().catch(e => console.warn("Scanner clear error", e));
       }
@@ -218,8 +228,8 @@ export default function Nutrition() {
         protein: savedItem.protein || 0,
         carbs: savedItem.carbs || 0,
         fat: savedItem.fat || 0,
-        type: savedItem.type as 'food' | 'drink',
-        meal: savedItem.meal as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+        type: itemType(type),
+        meal: itemMeal(selectedMeal),
         timestamp: new Date(savedItem.timestamp)
       };
       
@@ -229,6 +239,12 @@ export default function Nutrition() {
       console.error(err);
       toast('Failed to save nutrition log.', 'error');
     }
+  };
+
+  const itemType = (val: string): 'food' | 'drink' => (val === 'drink' ? 'drink' : 'food');
+  const itemMeal = (val: string): 'breakfast' | 'lunch' | 'dinner' | 'snack' => {
+     if (['breakfast', 'lunch', 'dinner', 'snack'].includes(val)) return val as any;
+     return 'breakfast';
   };
 
   const logMeal = async () => {
@@ -278,16 +294,18 @@ export default function Nutrition() {
     try {
       const res = await fetch(`/api/nutrition/search?q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
-      setSearchResults(data || []);
+      setSearchResults(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
       toast('Search failed', 'error');
+      setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
   };
 
   const handleBarcodeLookup = async (code: string) => {
+    if (!code) return;
     setIsProcessing(true);
     try {
       const res = await fetch(`/api/nutrition/barcode?barcode=${code}`);
@@ -296,10 +314,10 @@ export default function Nutrition() {
       
       const item: StagedItem = {
         name: data.name || 'Unknown',
-        calories: Math.round(data.calories || 0),
-        protein: data.protein || 0,
-        carbs: data.carbs || 0,
-        fat: data.fat || 0,
+        calories: Number(data.calories) || 0,
+        protein: Number(data.protein) || 0,
+        carbs: Number(data.carbs) || 0,
+        fat: Number(data.fat) || 0,
         brand: data.brand,
         image: data.image
       };
@@ -314,21 +332,32 @@ export default function Nutrition() {
     }
   };
 
-  const triggerVerification = (item: StagedItem) => {
-    setVerificationItem(item);
+  const triggerVerification = (item: any) => {
+    const safeItem: StagedItem = {
+      name: item.name || 'Unknown',
+      calories: Number(item.calories) || 0,
+      protein: Number(item.protein) || 0,
+      carbs: Number(item.carbs) || 0,
+      fat: Number(item.fat) || 0,
+      brand: item.brand,
+      image: item.image
+    };
+    setVerificationItem(safeItem);
     setPortionGrams('100');
   };
 
   const finalizeLogging = (mode: 'meal' | 'quick') => {
     if (!verificationItem) return;
     
-    const factor = (parseFloat(portionGrams) || 100) / 100;
+    const grams = parseFloat(portionGrams) || 100;
+    const factor = grams / 100;
+    
     const finalItem: StagedItem = {
       ...verificationItem,
       calories: Math.round(verificationItem.calories * factor),
-      protein: parseFloat((verificationItem.protein * factor).toFixed(1)),
-      carbs: parseFloat((verificationItem.carbs * factor).toFixed(1)),
-      fat: parseFloat((verificationItem.fat * factor).toFixed(1))
+      protein: Number((verificationItem.protein * factor).toFixed(1)),
+      carbs: Number((verificationItem.carbs * factor).toFixed(1)),
+      fat: Number((verificationItem.fat * factor).toFixed(1))
     };
 
     if (mode === 'meal') {
@@ -369,14 +398,13 @@ export default function Nutrition() {
 
       const data = await res.json();
       
-      setVerificationItem({ 
+      triggerVerification({ 
         name: data.name || 'Unknown Item', 
-        calories: data.calories || 0, 
-        protein: data.protein || 0, 
-        carbs: data.carbs || 0, 
-        fat: data.fat || 0 
+        calories: data.calories, 
+        protein: data.protein, 
+        carbs: data.carbs, 
+        fat: data.fat 
       });
-      setPortionGrams('100');
       toast('Analysis complete! Please verify.', 'success');
     } catch (err: any) {
       console.error(err);
@@ -619,14 +647,14 @@ export default function Nutrition() {
                         ) : (
                           searchResults.map((item, idx) => (
                             <div key={idx} className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 flex items-center justify-between group hover:border-slate-700 transition-colors">
-                              <div className="flex items-center gap-3">
-                                {item.image ? <img src={item.image} className="w-10 h-10 rounded-lg object-cover" alt="" /> : <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center"><Apple className="w-5 h-5 text-slate-600" /></div>}
+                              <div className="flex items-center gap-3 min-w-0">
+                                {item.image ? <img src={item.image} className="w-10 h-10 rounded-lg object-cover shrink-0" alt="" /> : <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center shrink-0"><Apple className="w-5 h-5 text-slate-600" /></div>}
                                 <div className="min-w-0">
                                   <p className="text-sm font-bold text-white truncate">{item.name}</p>
-                                  <p className="text-[10px] text-slate-500 uppercase font-bold">{Math.round(item.calories)} kcal / 100g • {item.brand || 'No Brand'}</p>
+                                  <p className="text-[10px] text-slate-500 uppercase font-bold">{Math.round(Number(item.calories) || 0)} kcal / 100g • {item.brand || 'No Brand'}</p>
                                 </div>
                               </div>
-                              <button onClick={() => triggerVerification({ name: item.name, calories: item.calories, protein: item.protein, carbs: item.carbs, fat: item.fat, brand: item.brand, image: item.image })} className="bg-slate-800 p-2 rounded-lg text-blue-500 hover:bg-blue-600 hover:text-white transition-all">
+                              <button onClick={() => triggerVerification(item)} className="bg-slate-800 p-2 rounded-lg text-blue-500 hover:bg-blue-600 hover:text-white transition-all ml-4 shrink-0">
                                 <Plus className="w-4 h-4" />
                               </button>
                             </div>
@@ -733,7 +761,7 @@ export default function Nutrition() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => triggerVerification({ name: manualName, calories: parseInt(manualCal, 10) || 0, protein: parseFloat(manualP) || 0, carbs: parseFloat(manualC) || 0, fat: parseFloat(manualF) || 0 })} disabled={!manualName || !manualCal} className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider">
+                        <button onClick={() => triggerVerification({ name: manualName, calories: manualCal, protein: manualP, carbs: manualC, fat: manualF })} disabled={!manualName || !manualCal} className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider">
                            Add to Meal
                         </button>
                         <button 
@@ -795,12 +823,12 @@ export default function Nutrition() {
                     </button>
                   </div>
                   
-                  <div className="p-6 overflow-y-auto space-y-6">
+                  <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
                     <div className="flex items-center gap-4">
                        {verificationItem.image ? (
-                          <img src={verificationItem.image} className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-800 shadow-md" alt="" />
+                          <img src={verificationItem.image} className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-800 shadow-md shrink-0" alt="" />
                        ) : (
-                          <div className="w-20 h-20 rounded-2xl bg-blue-500/10 border-2 border-slate-800 flex items-center justify-center">
+                          <div className="w-20 h-20 rounded-2xl bg-blue-500/10 border-2 border-slate-800 flex items-center justify-center shrink-0">
                              <Apple className="w-10 h-10 text-blue-500" />
                           </div>
                        )}
@@ -835,6 +863,7 @@ export default function Nutrition() {
                             <label className="text-[10px] font-bold text-blue-500 uppercase mb-1 block">Protein (g)</label>
                             <input 
                               type="number" 
+                              step="0.1"
                               value={verificationItem.protein}
                               onChange={e => setVerificationItem({...verificationItem, protein: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-blue-900/30 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none"
@@ -844,6 +873,7 @@ export default function Nutrition() {
                             <label className="text-[10px] font-bold text-orange-500 uppercase mb-1 block">Carbs (g)</label>
                             <input 
                               type="number" 
+                              step="0.1"
                               value={verificationItem.carbs}
                               onChange={e => setVerificationItem({...verificationItem, carbs: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-orange-900/30 rounded-xl p-3 text-white focus:border-orange-500 focus:outline-none"
@@ -853,6 +883,7 @@ export default function Nutrition() {
                             <label className="text-[10px] font-bold text-emerald-500 uppercase mb-1 block">Fat (g)</label>
                             <input 
                               type="number" 
+                              step="0.1"
                               value={verificationItem.fat}
                               onChange={e => setVerificationItem({...verificationItem, fat: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-emerald-900/30 rounded-xl p-3 text-white focus:border-emerald-500 focus:outline-none"
@@ -870,7 +901,7 @@ export default function Nutrition() {
                             onChange={e => setPortionGrams(e.target.value)}
                             className="w-32 bg-slate-950 border border-blue-500/50 rounded-2xl p-4 text-2xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 focus:outline-none"
                           />
-                          <span className="text-2xl font-bold text-slate-500">grams</span>
+                          <span className="text-2xl font-bold text-slate-500 uppercase text-sm">grams</span>
                        </div>
                        <div className="mt-4 flex justify-between px-2 text-xs font-bold uppercase">
                           <span className="text-slate-500">Resulting:</span>
@@ -882,13 +913,13 @@ export default function Nutrition() {
                   <div className="p-6 bg-slate-950/50 border-t border-slate-800 flex gap-3 shrink-0">
                     <button 
                       onClick={() => finalizeLogging('meal')}
-                      className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-4 rounded-2xl transition-all uppercase tracking-widest text-xs"
+                      className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-4 rounded-2xl transition-all uppercase tracking-widest text-[10px] lg:text-xs"
                     >
                       Add to Meal
                     </button>
                     <button 
                       onClick={() => finalizeLogging('quick')}
-                      className="flex-[1.5] bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-blue-600/20 uppercase tracking-widest text-xs"
+                      className="flex-[1.5] bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-blue-600/20 uppercase tracking-widest text-[10px] lg:text-xs"
                     >
                       Quick Log
                     </button>
@@ -949,18 +980,18 @@ export default function Nutrition() {
                         <div className="divide-y divide-slate-800/50">
                           {mealLogs.map(log => (
                             <div key={log.id} className="p-3 flex items-center justify-between hover:bg-slate-800/30 transition-colors rounded-xl">
-                              <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-4 min-w-0">
                                 <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", log.type === 'food' ? "bg-orange-500/10 text-orange-500" : "bg-blue-500/10 text-blue-500")}>
                                   {log.type === 'food' ? <Apple className="w-4 h-4" /> : <CupSoda className="w-4 h-4" />}
                                 </div>
-                                <div>
-                                  <p className="font-medium text-sm text-white leading-tight">{log.name}</p>
+                                <div className="min-w-0">
+                                  <p className="font-medium text-sm text-white leading-tight truncate">{log.name}</p>
                                   <div className="flex items-center gap-2 mt-1 text-[10px] uppercase font-bold tracking-wider">
                                     <span className="text-blue-500">{log.protein}g P</span>
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center justify-end gap-3 pl-4">
+                              <div className="flex items-center justify-end gap-3 pl-4 shrink-0">
                                 <div className="text-right">
                                   <p className="font-bold text-sm text-white whitespace-nowrap">{log.calories} <span className="text-xs text-slate-500 font-normal">kcal</span></p>
                                 </div>
@@ -978,8 +1009,8 @@ export default function Nutrition() {
           </>
         ) : (
           /* Monthly Calendar View */
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 lg:p-8 shadow-sm overflow-x-auto no-scrollbar">
+            <div className="flex items-center justify-between mb-8 min-w-[320px]">
               <div className="flex items-center gap-3">
                 <Calendar className="w-6 h-6 text-blue-500" />
                 <h2 className="text-xl font-bold text-white">{format(currentMonth, 'MMMM yyyy')}</h2>
@@ -991,7 +1022,7 @@ export default function Nutrition() {
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1 lg:gap-2 min-w-[320px]">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
                 <div key={d} className="text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{d}</div>
               ))}
@@ -1010,7 +1041,7 @@ export default function Nutrition() {
                   <div 
                     key={day.toString()} 
                     className={cn(
-                      "h-16 lg:h-24 rounded-xl border p-1 lg:p-2 flex flex-col justify-between transition-all",
+                      "h-16 lg:h-24 rounded-lg lg:rounded-xl border p-1 lg:p-2 flex flex-col justify-between transition-all",
                       isToday(day) ? "border-blue-500 bg-blue-500/5 ring-1 ring-blue-500/20" : "border-slate-800 bg-slate-950/50",
                       hasData && "hover:border-slate-600"
                     )}
@@ -1039,14 +1070,14 @@ export default function Nutrition() {
               })}
             </div>
             
-            <div className="mt-8 flex items-center justify-center gap-8 text-xs font-medium text-slate-500">
+            <div className="mt-8 flex items-center justify-center gap-8 text-xs font-medium text-slate-500 min-w-[320px]">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-emerald-500" />
                 <span>Goal Met</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500" />
-                <span>Exceeded Goal</span>
+                <span>Exceeded</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-slate-800" />
