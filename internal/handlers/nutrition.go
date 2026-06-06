@@ -63,6 +63,33 @@ func LogNutrition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If a barcode is present, save/update the BarcodeProduct cache with these verified values
+	if req.Barcode != "" {
+		var product models.BarcodeProduct
+		db.DB.Where("barcode = ?", req.Barcode).First(&product)
+		
+		product.Barcode = req.Barcode
+		product.Name = req.Name
+		
+		// If portion_grams is provided, we calculate the 100g values
+		if req.PortionGrams > 0 {
+			factor := 100.0 / req.PortionGrams
+			product.Calories = float64(req.Calories) * factor
+			product.Protein = req.Protein * factor
+			product.Carbs = req.Carbs * factor
+			product.Fat = req.Fat * factor
+		} else {
+			// Fallback if portion is not provided (assume 100g)
+			product.Calories = float64(req.Calories)
+			product.Protein = req.Protein
+			product.Carbs = req.Carbs
+			product.Fat = req.Fat
+		}
+		
+		product.UpdatedAt = time.Now()
+		db.DB.Save(&product)
+	}
+
 	respondJSON(w, http.StatusCreated, req)
 }
 
@@ -71,6 +98,23 @@ func GetFoodByBarcode(w http.ResponseWriter, r *http.Request) {
 	barcode := r.URL.Query().Get("barcode")
 	if barcode == "" {
 		respondError(w, http.StatusBadRequest, "Barcode is required")
+		return
+	}
+
+	// Check local DB first
+	var localProduct models.BarcodeProduct
+	if err := db.DB.Where("barcode = ?", barcode).First(&localProduct).Error; err == nil {
+		data := map[string]interface{}{
+			"name":     localProduct.Name,
+			"brand":    localProduct.Brand,
+			"calories": localProduct.Calories,
+			"protein":  localProduct.Protein,
+			"carbs":    localProduct.Carbs,
+			"fat":      localProduct.Fat,
+			"image":    localProduct.Image,
+			"source":   "local",
+		}
+		respondJSON(w, http.StatusOK, data)
 		return
 	}
 

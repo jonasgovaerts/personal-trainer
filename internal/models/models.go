@@ -66,14 +66,32 @@ type WorkoutLog struct {
 
 // NutritionLog represents a food or drink item logged by the user.
 type NutritionLog struct {
+	ID           uint      `json:"id" gorm:"primarykey"`
+	UserID       uint      `json:"user_id"`
+	Barcode      string    `json:"barcode" gorm:"size:100"`
+	Name         string    `json:"name" gorm:"not null"`
+	Calories     int       `json:"calories" gorm:"not null"`
+	Protein      float64   `json:"protein"`
+	Carbs        float64   `json:"carbs"`
+	Fat          float64   `json:"fat"`
+	PortionGrams float64   `json:"portion_grams"`
+	Type         string    `json:"type" gorm:"size:20"` // 'food' or 'drink'
+	Meal         string    `json:"meal" gorm:"size:50"` // 'breakfast', 'lunch', etc.
+	Timestamp    time.Time `json:"timestamp" gorm:"default:CURRENT_TIMESTAMP"`
+}
+
+// BarcodeProduct represents a cached or user-corrected product mapping.
+type BarcodeProduct struct {
 	ID        uint      `json:"id" gorm:"primarykey"`
-	UserID    uint      `json:"user_id"`
+	Barcode   string    `json:"barcode" gorm:"uniqueIndex;not null;size:100"`
 	Name      string    `json:"name" gorm:"not null"`
-	Calories  int       `json:"calories" gorm:"not null"`
+	Brand     string    `json:"brand"`
+	Calories  float64   `json:"calories"`
 	Protein   float64   `json:"protein"`
 	Carbs     float64   `json:"carbs"`
 	Fat       float64   `json:"fat"`
-	Type      string    `json:"type" gorm:"size:20"` // 'food' or 'drink'
-	Meal      string    `json:"meal" gorm:"size:50"` // 'breakfast', 'lunch', etc.
-	Timestamp time.Time `json:"timestamp" gorm:"default:CURRENT_TIMESTAMP"`
+	Image     string    `json:"image"`
+	CreatedAt time.Time `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"default:CURRENT_TIMESTAMP"`
 }
+

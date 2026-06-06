@@ -16,6 +16,7 @@ import { Html5Qrcode } from "html5-qrcode";
 
 interface LogItem {
   id: string;
+  barcode?: string;
   name: string;
   calories: number;
   protein: number;
@@ -27,11 +28,13 @@ interface LogItem {
 }
 
 interface StagedItem {
+  barcode?: string;
   name: string;
   calories: number;
   protein: number;
   carbs: number;
   fat: number;
+  portionGrams?: number;
   brand?: string;
   image?: string;
 }
@@ -222,18 +225,20 @@ export default function Nutrition() {
     };
   }, [cameraStream]);
 
-  const addLog = async (name: string, calories: number, protein: number, carbs: number, fat: number, type: 'food' | 'drink' = 'food') => {
+  const addLog = async (name: string, calories: number, protein: number, carbs: number, fat: number, type: 'food' | 'drink' = 'food', barcode?: string, portionGrams?: number) => {
     try {
       const res = await fetch('/api/nutrition', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: 1,
+          barcode,
           name,
           calories,
           protein,
           carbs,
           fat,
+          portion_grams: portionGrams,
           type,
           meal: selectedMeal
         })
@@ -245,6 +250,7 @@ export default function Nutrition() {
       
       const newItem: LogItem = {
         id: savedItem.id.toString(),
+        barcode: savedItem.barcode,
         name: savedItem.name,
         calories: savedItem.calories,
         protein: savedItem.protein || 0,
@@ -274,7 +280,7 @@ export default function Nutrition() {
     
     confirm(`Log all ${stagedItems.length} items to ${selectedMeal}?`, async () => {
       for (const item of stagedItems) {
-        await addLog(item.name, item.calories, item.protein, item.carbs, item.fat, 'food');
+        await addLog(item.name, item.calories, item.protein, item.carbs, item.fat, 'food', item.barcode, item.portionGrams);
       }
       setStagedItems([]);
       toast('Meal logged successfully!', 'success');
@@ -335,6 +341,7 @@ export default function Nutrition() {
       const data = await res.json();
       
       const item: StagedItem = {
+        barcode: code,
         name: data.name || 'Unknown',
         calories: Number(data.calories) || 0,
         protein: Number(data.protein) || 0,
@@ -379,14 +386,15 @@ export default function Nutrition() {
       calories: Math.round(verificationItem.calories * factor),
       protein: Number((verificationItem.protein * factor).toFixed(1)),
       carbs: Number((verificationItem.carbs * factor).toFixed(1)),
-      fat: Number((verificationItem.fat * factor).toFixed(1))
+      fat: Number((verificationItem.fat * factor).toFixed(1)),
+      portionGrams: grams
     };
 
     if (mode === 'meal') {
       setStagedItems([...stagedItems, finalItem]);
       toast(`Added ${finalItem.name} to meal builder`, 'info');
     } else {
-      addLog(finalItem.name, finalItem.calories, finalItem.protein, finalItem.carbs, finalItem.fat, 'food');
+      addLog(finalItem.name, finalItem.calories, finalItem.protein, finalItem.carbs, finalItem.fat, 'food', finalItem.barcode, grams);
       toast(`${finalItem.name} logged!`, 'success');
     }
 
