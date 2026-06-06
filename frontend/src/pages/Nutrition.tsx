@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Camera, ScanBarcode, Plus, Apple, CupSoda, Target, 
-  Sparkles, Activity, X, Trash2, Calendar, ChevronLeft, ChevronRight, Search as SearchIcon, Loader2, Utensils
+  Sparkles, Activity, X, Trash2, Calendar, ChevronLeft, ChevronRight, Search as SearchIcon, Loader2, Utensils, AlertTriangle, Check
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
@@ -55,6 +55,10 @@ export default function Nutrition() {
 
   // Meal Builder State
   const [stagedItems, setStagedItems] = useState<StagedItem[]>([]);
+
+  // Verification Modal State
+  const [verificationItem, setVerificationItem] = useState<StagedItem | null>(null);
+  const [portionGrams, setPortionGrams] = useState<string>('100');
 
   useEffect(() => {
     if (user?.goal_calories) {
@@ -132,7 +136,6 @@ export default function Nutrition() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const [aiResult, setAiResult] = useState<StagedItem | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -148,8 +151,9 @@ export default function Nutrition() {
 
   // --- Barcode Scanner Logic ---
   useEffect(() => {
+    let scanner: Html5QrcodeScanner | null = null;
     if (activeTab === 'barcode' && isCameraOpen) {
-      const scanner = new Html5QrcodeScanner(
+      scanner = new Html5QrcodeScanner(
         "reader", 
         { fps: 10, qrbox: { width: 250, height: 150 } }, 
         /* verbose= */ false
@@ -157,16 +161,17 @@ export default function Nutrition() {
 
       scanner.render((decodedText) => {
         handleBarcodeLookup(decodedText);
-        scanner.clear();
+        scanner?.clear();
         setIsCameraOpen(false);
       }, (_error) => {
-        // scan error, usually safe to ignore
+        // scan error
       });
-
-      return () => {
-        scanner.clear().catch(e => console.warn("Scanner clear error", e));
-      };
     }
+    return () => {
+      if (scanner) {
+        scanner.clear().catch(e => console.warn("Scanner clear error", e));
+      }
+    };
   }, [activeTab, isCameraOpen]);
 
   // Attach the stream to the video element for AI Cam
@@ -220,7 +225,6 @@ export default function Nutrition() {
       
       setLogs([newItem, ...logs]);
       setHistoryLogs([newItem, ...historyLogs]);
-      toast(`${name} added!`, 'success');
     } catch (err) {
       console.error(err);
       toast('Failed to save nutrition log.', 'error');
@@ -265,6 +269,7 @@ export default function Nutrition() {
     setManualP('');
     setManualC('');
     setManualF('');
+    toast(`${manualName} logged!`, 'success');
   };
 
   const handleSearch = async () => {
@@ -299,19 +304,42 @@ export default function Nutrition() {
         image: data.image
       };
       
-      setAiResult(item);
-      toast(`Found ${item.name}!`, 'success');
+      setVerificationItem(item);
+      setPortionGrams('100');
     } catch (err) {
       console.error(err);
-      toast('Barcode not recognized', 'error');
+      toast('Barcode not recognized. Try AI Cam!', 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const addToStage = (item: StagedItem) => {
-    setStagedItems([...stagedItems, item]);
-    toast(`Added ${item.name} to meal`, 'info');
+  const triggerVerification = (item: StagedItem) => {
+    setVerificationItem(item);
+    setPortionGrams('100');
+  };
+
+  const finalizeLogging = (mode: 'meal' | 'quick') => {
+    if (!verificationItem) return;
+    
+    const factor = (parseFloat(portionGrams) || 100) / 100;
+    const finalItem: StagedItem = {
+      ...verificationItem,
+      calories: Math.round(verificationItem.calories * factor),
+      protein: parseFloat((verificationItem.protein * factor).toFixed(1)),
+      carbs: parseFloat((verificationItem.carbs * factor).toFixed(1)),
+      fat: parseFloat((verificationItem.fat * factor).toFixed(1))
+    };
+
+    if (mode === 'meal') {
+      setStagedItems([...stagedItems, finalItem]);
+      toast(`Added ${finalItem.name} to meal builder`, 'info');
+    } else {
+      addLog(finalItem.name, finalItem.calories, finalItem.protein, finalItem.carbs, finalItem.fat, 'food');
+      toast(`${finalItem.name} logged!`, 'success');
+    }
+
+    setVerificationItem(null);
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -341,14 +369,15 @@ export default function Nutrition() {
 
       const data = await res.json();
       
-      setAiResult({ 
+      setVerificationItem({ 
         name: data.name || 'Unknown Item', 
         calories: data.calories || 0, 
         protein: data.protein || 0, 
         carbs: data.carbs || 0, 
         fat: data.fat || 0 
       });
-      toast('Analysis complete!', 'success');
+      setPortionGrams('100');
+      toast('Analysis complete! Please verify.', 'success');
     } catch (err: any) {
       console.error(err);
       toast(err.message || 'Error processing image.', 'error');
@@ -597,7 +626,7 @@ export default function Nutrition() {
                                   <p className="text-[10px] text-slate-500 uppercase font-bold">{Math.round(item.calories)} kcal / 100g • {item.brand || 'No Brand'}</p>
                                 </div>
                               </div>
-                              <button onClick={() => addToStage({ name: item.name, calories: item.calories, protein: item.protein, carbs: item.carbs, fat: item.fat, brand: item.brand, image: item.image })} className="bg-slate-800 p-2 rounded-lg text-blue-500 hover:bg-blue-600 hover:text-white transition-all">
+                              <button onClick={() => triggerVerification({ name: item.name, calories: item.calories, protein: item.protein, carbs: item.carbs, fat: item.fat, brand: item.brand, image: item.image })} className="bg-slate-800 p-2 rounded-lg text-blue-500 hover:bg-blue-600 hover:text-white transition-all">
                                 <Plus className="w-4 h-4" />
                               </button>
                             </div>
@@ -704,7 +733,7 @@ export default function Nutrition() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => addToStage({ name: manualName, calories: parseInt(manualCal, 10) || 0, protein: parseFloat(manualP) || 0, carbs: parseFloat(manualC) || 0, fat: parseFloat(manualF) || 0 })} disabled={!manualName || !manualCal} className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider">
+                        <button onClick={() => triggerVerification({ name: manualName, calories: parseInt(manualCal, 10) || 0, protein: parseFloat(manualP) || 0, carbs: parseFloat(manualC) || 0, fat: parseFloat(manualF) || 0 })} disabled={!manualName || !manualCal} className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider">
                            Add to Meal
                         </button>
                         <button 
@@ -747,46 +776,126 @@ export default function Nutrition() {
                     </div>
                   )}
                   
-                  {/* Result Result Overlay */}
-                  {aiResult && (
-                    <div className="mt-4 p-4 bg-blue-600/10 border border-blue-500/20 rounded-xl animate-in fade-in zoom-in-95 duration-300">
-                      <div className="flex items-center gap-4 mb-3">
-                        {aiResult.image ? <img src={aiResult.image} className="w-12 h-12 rounded-lg object-cover" alt="" /> : <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500"><Apple className="w-6 h-6" /></div>}
-                        <div className="min-w-0">
-                          <p className="font-bold text-white text-lg leading-tight truncate">{aiResult.name}</p>
-                          {aiResult.brand && <p className="text-xs text-blue-400 font-bold uppercase truncate">{aiResult.brand}</p>}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 mb-4">
-                        <div className="bg-slate-900/50 p-2 rounded-lg text-center">
-                          <p className="text-[10px] text-slate-500 uppercase font-bold">Kcal</p>
-                          <p className="text-sm font-bold text-white">{Math.round(aiResult.calories)}</p>
-                        </div>
-                        <div className="bg-slate-900/50 p-2 rounded-lg text-center">
-                          <p className="text-[10px] text-blue-500 uppercase font-bold">Prot</p>
-                          <p className="text-sm font-bold text-white">{aiResult.protein}g</p>
-                        </div>
-                        <div className="bg-slate-900/50 p-2 rounded-lg text-center">
-                          <p className="text-[10px] text-orange-500 uppercase font-bold">Carb</p>
-                          <p className="text-sm font-bold text-white">{aiResult.carbs}g</p>
-                        </div>
-                        <div className="bg-slate-900/50 p-2 rounded-lg text-center">
-                          <p className="text-[10px] text-emerald-500 uppercase font-bold">Fat</p>
-                          <p className="text-sm font-bold text-white">{aiResult.fat}g</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => setAiResult(null)} className="flex-1 py-2 text-slate-400 font-bold text-xs uppercase hover:text-white transition-colors">Cancel</button>
-                        <button onClick={() => { addToStage(aiResult); setAiResult(null); }} className="flex-1 bg-slate-800 text-blue-400 py-2 rounded-lg font-bold text-xs uppercase hover:bg-slate-700 transition-colors">Add to Meal</button>
-                        <button onClick={() => { addLog(aiResult.name, aiResult.calories, aiResult.protein, aiResult.carbs, aiResult.fat); setAiResult(null); }} className="flex-[1.5] bg-blue-600 text-white py-2 rounded-lg font-bold text-xs uppercase shadow-lg shadow-blue-600/20 hover:bg-blue-500 transition-colors">Quick Log</button>
-                      </div>
-                    </div>
-                  )}
-
                   <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
                 </div>
               </div>
             </div>
+
+            {/* Verification Modal */}
+            {verificationItem && (
+              <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                  <div className="bg-blue-600 p-6 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3 text-white">
+                       <Check className="w-6 h-6" />
+                       <h2 className="text-xl font-bold">Review Food Data</h2>
+                    </div>
+                    <button onClick={() => setVerificationItem(null)} className="text-blue-100 hover:text-white transition-colors">
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-6 overflow-y-auto space-y-6">
+                    <div className="flex items-center gap-4">
+                       {verificationItem.image ? (
+                          <img src={verificationItem.image} className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-800 shadow-md" alt="" />
+                       ) : (
+                          <div className="w-20 h-20 rounded-2xl bg-blue-500/10 border-2 border-slate-800 flex items-center justify-center">
+                             <Apple className="w-10 h-10 text-blue-500" />
+                          </div>
+                       )}
+                       <div className="flex-1 min-w-0">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Food Name</label>
+                          <input 
+                            type="text" 
+                            value={verificationItem.name}
+                            onChange={e => setVerificationItem({...verificationItem, name: e.target.value})}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white font-bold focus:border-blue-500 focus:outline-none"
+                          />
+                       </div>
+                    </div>
+
+                    <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-5 space-y-4">
+                       <div className="flex items-center gap-2 mb-2">
+                          <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Values per 100g / 100ml</p>
+                       </div>
+                       
+                       <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Calories (kcal)</label>
+                            <input 
+                              type="number" 
+                              value={verificationItem.calories}
+                              onChange={e => setVerificationItem({...verificationItem, calories: parseInt(e.target.value) || 0})}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-blue-500 uppercase mb-1 block">Protein (g)</label>
+                            <input 
+                              type="number" 
+                              value={verificationItem.protein}
+                              onChange={e => setVerificationItem({...verificationItem, protein: parseFloat(e.target.value) || 0})}
+                              className="w-full bg-slate-900 border border-blue-900/30 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-orange-500 uppercase mb-1 block">Carbs (g)</label>
+                            <input 
+                              type="number" 
+                              value={verificationItem.carbs}
+                              onChange={e => setVerificationItem({...verificationItem, carbs: parseFloat(e.target.value) || 0})}
+                              className="w-full bg-slate-900 border border-orange-900/30 rounded-xl p-3 text-white focus:border-orange-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-emerald-500 uppercase mb-1 block">Fat (g)</label>
+                            <input 
+                              type="number" 
+                              value={verificationItem.fat}
+                              onChange={e => setVerificationItem({...verificationItem, fat: parseFloat(e.target.value) || 0})}
+                              className="w-full bg-slate-900 border border-emerald-900/30 rounded-xl p-3 text-white focus:border-emerald-500 focus:outline-none"
+                            />
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="bg-blue-600/5 border border-blue-600/20 rounded-2xl p-5">
+                       <label className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 block text-center">How much did you eat?</label>
+                       <div className="flex items-center justify-center gap-4">
+                          <input 
+                            type="number" 
+                            value={portionGrams}
+                            onChange={e => setPortionGrams(e.target.value)}
+                            className="w-32 bg-slate-950 border border-blue-500/50 rounded-2xl p-4 text-2xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                          <span className="text-2xl font-bold text-slate-500">grams</span>
+                       </div>
+                       <div className="mt-4 flex justify-between px-2 text-xs font-bold uppercase">
+                          <span className="text-slate-500">Resulting:</span>
+                          <span className="text-white">{Math.round(verificationItem.calories * (parseFloat(portionGrams) || 0) / 100)} kcal</span>
+                       </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 bg-slate-950/50 border-t border-slate-800 flex gap-3 shrink-0">
+                    <button 
+                      onClick={() => finalizeLogging('meal')}
+                      className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-4 rounded-2xl transition-all uppercase tracking-widest text-xs"
+                    >
+                      Add to Meal
+                    </button>
+                    <button 
+                      onClick={() => finalizeLogging('quick')}
+                      className="flex-[1.5] bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-blue-600/20 uppercase tracking-widest text-xs"
+                    >
+                      Quick Log
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Meal Builder Floating Panel */}
             {stagedItems.length > 0 && (
