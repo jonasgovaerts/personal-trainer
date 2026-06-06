@@ -1,5 +1,6 @@
 # Build Frontend
-FROM node:20-alpine AS frontend-builder
+# Using BUILDPLATFORM ensures this runs on the native host (AMD64)
+FROM --platform=$BUILDPLATFORM node:20-alpine AS frontend-builder
 WORKDIR /frontend
 COPY frontend/package*.json ./
 RUN npm install
@@ -7,14 +8,21 @@ COPY frontend/ .
 RUN npm run build
 
 # Build Backend
-FROM golang:1.26-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS backend-builder
 WORKDIR /app
+
+# Export the target architecture (e.g. arm64 or amd64)
+ARG TARGETARCH
+
 COPY go.mod go.sum ./
 RUN go mod download
+
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
+# Cross-compile the Go binary using the TARGETARCH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o server ./cmd/server
 
 # Final stage
+# This will be the target platform image
 FROM alpine:latest
 WORKDIR /root/
 # Copy binary
