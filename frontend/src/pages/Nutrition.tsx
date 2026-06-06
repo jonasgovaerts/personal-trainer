@@ -35,6 +35,7 @@ interface StagedItem {
   carbs: number;
   fat: number;
   portionGrams?: number;
+  type?: 'food' | 'drink';
   brand?: string;
   image?: string;
 }
@@ -126,6 +127,7 @@ export default function Nutrition() {
   const [manualP, setManualP] = useState('');
   const [manualC, setManualC] = useState('');
   const [manualF, setManualF] = useState('');
+  const [manualType, setManualType] = useState<'food' | 'drink'>('food');
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
@@ -139,6 +141,7 @@ export default function Nutrition() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [aiPrompt, setAiPrompt] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -280,7 +283,7 @@ export default function Nutrition() {
     
     confirm(`Log all ${stagedItems.length} items to ${selectedMeal}?`, async () => {
       for (const item of stagedItems) {
-        await addLog(item.name, item.calories, item.protein, item.carbs, item.fat, 'food', item.barcode, item.portionGrams);
+        await addLog(item.name, item.calories, item.protein, item.carbs, item.fat, item.type || 'food', item.barcode, item.portionGrams);
       }
       setStagedItems([]);
       toast('Meal logged successfully!', 'success');
@@ -307,7 +310,7 @@ export default function Nutrition() {
 
   const handleManualAdd = () => {
     if (!manualName || !manualCal) return;
-    addLog(manualName, parseInt(manualCal, 10), parseFloat(manualP) || 0, parseFloat(manualC) || 0, parseFloat(manualF) || 0, 'food');
+    addLog(manualName, parseInt(manualCal, 10), parseFloat(manualP) || 0, parseFloat(manualC) || 0, parseFloat(manualF) || 0, manualType);
     setManualName('');
     setManualCal('');
     setManualP('');
@@ -363,11 +366,13 @@ export default function Nutrition() {
 
   const triggerVerification = (item: any) => {
     const safeItem: StagedItem = {
+      barcode: item.barcode,
       name: item.name || 'Unknown',
       calories: Number(item.calories) || 0,
       protein: Number(item.protein) || 0,
       carbs: Number(item.carbs) || 0,
       fat: Number(item.fat) || 0,
+      type: item.type || 'food',
       brand: item.brand,
       image: item.image
     };
@@ -394,7 +399,7 @@ export default function Nutrition() {
       setStagedItems([...stagedItems, finalItem]);
       toast(`Added ${finalItem.name} to meal builder`, 'info');
     } else {
-      addLog(finalItem.name, finalItem.calories, finalItem.protein, finalItem.carbs, finalItem.fat, 'food', finalItem.barcode, grams);
+      addLog(finalItem.name, finalItem.calories, finalItem.protein, finalItem.carbs, finalItem.fat, finalItem.type || 'food', finalItem.barcode, grams);
       toast(`${finalItem.name} logged!`, 'success');
     }
 
@@ -414,6 +419,9 @@ export default function Nutrition() {
     setIsProcessing(true);
     const formData = new FormData();
     formData.append('image', file, 'capture.jpg');
+    if (aiPrompt) {
+      formData.append('prompt', aiPrompt);
+    }
 
     try {
       const res = await fetch(`/api/nutrition/analyze?mode=ai`, {
@@ -433,9 +441,11 @@ export default function Nutrition() {
         calories: data.calories, 
         protein: data.protein, 
         carbs: data.carbs, 
-        fat: data.fat 
+        fat: data.fat,
+        type: data.type || 'food'
       });
       toast('Analysis complete! Please verify.', 'success');
+      setAiPrompt(''); // Clear prompt after success
     } catch (err: any) {
       console.error(err);
       toast(err.message || 'Error processing image.', 'error');
@@ -736,6 +746,20 @@ export default function Nutrition() {
 
                   {activeTab === 'manual' && (
                     <div className="space-y-4">
+                      <div className="flex gap-2 p-1 bg-slate-950 border border-slate-800 rounded-xl mb-2">
+                        <button 
+                          onClick={() => setManualType('food')}
+                          className={cn("flex-1 py-2 text-xs font-bold rounded-lg transition-all", manualType === 'food' ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-400")}
+                        >
+                          FOOD (g)
+                        </button>
+                        <button 
+                          onClick={() => setManualType('drink')}
+                          className={cn("flex-1 py-2 text-xs font-bold rounded-lg transition-all", manualType === 'drink' ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-400")}
+                        >
+                          DRINK (ml)
+                        </button>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
                         <div className="sm:col-span-3">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('nutrition.manual.name')}</label>
@@ -743,7 +767,7 @@ export default function Nutrition() {
                             type="text" 
                             value={manualName}
                             onChange={e => setManualName(e.target.value)}
-                            placeholder="e.g. Chicken"
+                            placeholder={manualType === 'food' ? "e.g. Chicken" : "e.g. Orange Juice"}
                             className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500"
                           />
                         </div>
@@ -791,7 +815,7 @@ export default function Nutrition() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => triggerVerification({ name: manualName, calories: manualCal, protein: manualP, carbs: manualC, fat: manualF })} disabled={!manualName || !manualCal} className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider">
+                        <button onClick={() => triggerVerification({ name: manualName, calories: manualCal, protein: manualP, carbs: manualC, fat: manualF, type: manualType })} disabled={!manualName || !manualCal} className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider">
                            Add to Meal
                         </button>
                         <button 
@@ -824,7 +848,19 @@ export default function Nutrition() {
                       ) : (
                         <>
                           <Sparkles className="w-12 h-12 text-blue-500 mb-4" />
-                          <p className="text-slate-400 text-sm mb-6 max-w-sm">{t('nutrition.ai.prompt')}</p>
+                          <p className="text-slate-400 text-sm mb-4 max-w-sm">{t('nutrition.ai.prompt')}</p>
+                          
+                          <div className="w-full max-w-md mb-6 relative">
+                            <input 
+                              type="text"
+                              value={aiPrompt}
+                              onChange={e => setAiPrompt(e.target.value)}
+                              placeholder="Add details: e.g. Subway sandwich, 500ml soda..."
+                              className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-blue-500"
+                            />
+                            <SearchIcon className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                          </div>
+
                           <div className="flex gap-4">
                             <button onClick={startCamera} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center gap-2"><Camera className="w-5 h-5" /> Take Photo</button>
                             <button onClick={() => fileInputRef.current?.click()} className="bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-300 font-bold py-3 px-6 rounded-xl transition-colors flex items-center gap-2"><Plus className="w-5 h-5" /> Upload File</button>
@@ -876,7 +912,7 @@ export default function Nutrition() {
                     <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-5 space-y-4">
                        <div className="flex items-center gap-2 mb-2">
                           <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Values per 100g / 100ml</p>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Values per 100{verificationItem.type === 'drink' ? 'ml' : 'g'}</p>
                        </div>
                        
                        <div className="grid grid-cols-2 gap-4">
@@ -923,7 +959,7 @@ export default function Nutrition() {
                     </div>
 
                     <div className="bg-blue-600/5 border border-blue-600/20 rounded-2xl p-5">
-                       <label className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 block text-center">How much did you eat?</label>
+                       <label className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 block text-center">How much did you {verificationItem.type === 'drink' ? 'drink' : 'eat'}?</label>
                        <div className="flex items-center justify-center gap-4">
                           <input 
                             type="number" 
@@ -931,7 +967,7 @@ export default function Nutrition() {
                             onChange={e => setPortionGrams(e.target.value)}
                             className="w-32 bg-slate-950 border border-blue-500/50 rounded-2xl p-4 text-2xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 focus:outline-none"
                           />
-                          <span className="text-2xl font-bold text-slate-500 uppercase text-sm">grams</span>
+                          <span className="text-2xl font-bold text-slate-500 uppercase text-sm">{verificationItem.type === 'drink' ? 'ml' : 'grams'}</span>
                        </div>
                        <div className="mt-4 flex justify-between px-2 text-xs font-bold uppercase">
                           <span className="text-slate-500">Resulting:</span>

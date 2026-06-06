@@ -18,6 +18,7 @@ type AnalyzeResponse struct {
 	Protein  float64 `json:"protein"`
 	Carbs    float64 `json:"carbs"`
 	Fat      float64 `json:"fat"`
+	Type     string  `json:"type"`
 }
 
 // AnalyzeNutrition handles AI analysis of food or barcodes
@@ -67,12 +68,22 @@ func AnalyzeNutrition(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mode := r.URL.Query().Get("mode")
-	log.Printf("INFO: Starting AI analysis in %s mode", mode)
+	userPrompt := r.FormValue("prompt")
+	log.Printf("INFO: Starting AI analysis in %s mode. User prompt: %s", mode, userPrompt)
+	
 	var prompt genai.Text
 	if mode == "barcode" {
-		prompt = genai.Text(`Analyze this image of a barcode or nutrition label. Provide a single JSON object with the following fields: "name" (a short descriptive name), "calories" (integer estimate of the calories per 100 grams), "protein" (float estimate per 100g), "carbs" (float estimate per 100g), and "fat" (float estimate per 100g). Example: {"name": "Protein Bar", "calories": 350, "protein": 20.0, "carbs": 30.0, "fat": 10.0}. Return ONLY valid JSON, no markdown formatting.`)
+		instruction := `Analyze this image of a barcode or nutrition label. Provide a single JSON object with the following fields: "name" (a short descriptive name), "calories" (integer estimate of the calories per 100 grams), "protein" (float estimate per 100g), "carbs" (float estimate per 100g), and "fat" (float estimate per 100g). Example: {"name": "Protein Bar", "calories": 350, "protein": 20.0, "carbs": 30.0, "fat": 10.0}. Return ONLY valid JSON, no markdown formatting.`
+		if userPrompt != "" {
+			instruction += " Context from user: " + userPrompt
+		}
+		prompt = genai.Text(instruction)
 	} else {
-		prompt = genai.Text(`Analyze this image of a plate of food. Provide a single JSON object with the following fields: "name" (a short descriptive name for the entire meal), "calories" (integer estimate of the TOTAL calories for the entire plate), "protein" (float estimate of total protein in grams), "carbs" (float estimate of total carbs in grams), and "fat" (float estimate of total fat in grams). Example: {"name": "Steak and Rice", "calories": 650, "protein": 45.0, "carbs": 50.0, "fat": 20.0}. Return ONLY valid JSON, no markdown formatting.`)
+		instruction := `Analyze this image of a plate of food or a drink. Provide a single JSON object with the following fields: "name" (a short descriptive name for the entire meal), "calories" (integer estimate of the TOTAL calories for the entire plate), "protein" (float estimate of total protein in grams), "carbs" (float estimate of total carbs in grams), and "fat" (float estimate of total fat in grams), and "type" (either "food" or "drink"). Example: {"name": "Steak and Rice", "calories": 650, "protein": 45.0, "carbs": 50.0, "fat": 20.0, "type": "food"}. Return ONLY valid JSON, no markdown formatting.`
+		if userPrompt != "" {
+			instruction += " Context from user: " + userPrompt
+		}
+		prompt = genai.Text(instruction)
 	}
 
 	resp, err := model.GenerateContent(ctx, prompt, genai.ImageData(format, imgData))
