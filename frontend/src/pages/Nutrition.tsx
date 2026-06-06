@@ -12,7 +12,7 @@ import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, 
   isSameDay, isToday, subMonths, addMonths 
 } from 'date-fns';
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 
 interface LogItem {
   id: string;
@@ -151,25 +151,36 @@ export default function Nutrition() {
 
   // --- Barcode Scanner Logic ---
   useEffect(() => {
-    let scanner: Html5QrcodeScanner | null = null;
+    let html5QrCode: Html5Qrcode | null = null;
     
     // Use a small delay to ensure the DOM element "reader" is painted
     const timeoutId = setTimeout(() => {
       if (activeTab === 'barcode' && isCameraOpen) {
         try {
-          scanner = new Html5QrcodeScanner(
-            "reader", 
-            { fps: 10, qrbox: { width: 250, height: 150 } }, 
-            /* verbose= */ false
-          );
-
-          scanner.render((decodedText) => {
-            setBarcodeInput(decodedText);
-            scanner?.clear();
+          html5QrCode = new Html5Qrcode("reader");
+          html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 150 },
+            },
+            (decodedText) => {
+              setBarcodeInput(decodedText);
+              if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                  html5QrCode?.clear();
+                }).catch(e => console.error("Failed to stop scanner", e));
+              }
+              setIsCameraOpen(false);
+              toast('Barcode captured! Click Lookup to search.', 'info');
+            },
+            (_errorMessage) => {
+              // parse error, ignore
+            }
+          ).catch((err) => {
+            console.error("Camera start failed", err);
+            toast("Failed to start camera. Check permissions.", "error");
             setIsCameraOpen(false);
-            toast('Barcode captured! Click Lookup to search.', 'info');
-          }, (_error) => {
-            // scan error
           });
         } catch (e) {
           console.error("Scanner initialization failed", e);
@@ -179,8 +190,18 @@ export default function Nutrition() {
 
     return () => {
       clearTimeout(timeoutId);
-      if (scanner) {
-        scanner.clear().catch(e => console.warn("Scanner clear error", e));
+      if (html5QrCode) {
+        try {
+          if (html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+              html5QrCode?.clear();
+            }).catch(e => console.warn("Scanner stop error", e));
+          } else {
+            html5QrCode.clear();
+          }
+        } catch (e) {
+          console.warn("Scanner clear error", e);
+        }
       }
     };
   }, [activeTab, isCameraOpen]);
