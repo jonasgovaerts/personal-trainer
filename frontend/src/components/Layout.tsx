@@ -14,6 +14,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
   const [isStartMenuOpen, setIsStartMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [headerSearch, setHeaderSearch] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -82,30 +84,52 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md z-10 shrink-0">
-          {/* Mobile Menu Button */}
-          <button 
-            onClick={() => setIsMobileMobileMenuOpen(true)}
-            className="lg:hidden p-2 text-slate-400 hover:text-white transition-colors"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-
-          <div className="flex items-center gap-2 lg:hidden text-blue-500 flex-1 justify-center">
-            <Dumbbell className="h-5 w-5" />
-            <span className="text-sm font-bold tracking-tight text-white uppercase">{t('app.title')}</span>
+        <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md z-10 shrink-0 gap-4">
+          {/* Mobile Menu Button & Search Toggle */}
+          <div className="flex items-center lg:hidden">
+            <button 
+              onClick={() => setIsMobileMobileMenuOpen(true)}
+              className={cn("p-2 text-slate-400 hover:text-white transition-colors", isSearchOpen && "hidden")}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <button 
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className="p-2 text-slate-400 hover:text-white transition-colors"
+            >
+              {isSearchOpen ? <X className="w-6 h-6" /> : <Search className="w-6 h-6" />}
+            </button>
           </div>
 
-          <div className="hidden lg:relative lg:block w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder={t('header.search')}
-              className="w-full bg-slate-900 border border-slate-800 rounded-full py-2 pl-10 pr-4 text-sm text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-            />
+          {!isSearchOpen && (
+            <div className="flex items-center gap-2 lg:hidden text-blue-500 flex-1 justify-center animate-in fade-in duration-300">
+              <Dumbbell className="h-5 w-5" />
+              <span className="text-sm font-bold tracking-tight text-white uppercase">{t('app.title')}</span>
+            </div>
+          )}
+
+          {/* Desktop Search & Mobile Search Input */}
+          <div className={cn(
+            "flex-1 max-w-xl transition-all duration-300",
+            isSearchOpen ? "block" : "hidden lg:block"
+          )}>
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input 
+                type="text" 
+                value={headerSearch}
+                onChange={(e) => setHeaderSearch(e.target.value)}
+                placeholder={t('header.search')}
+                className="w-full bg-slate-900 border border-slate-800 rounded-full py-2 pl-10 pr-4 text-sm text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                autoFocus={isSearchOpen}
+              />
+            </div>
           </div>
           
-          <div className="flex items-center gap-2 lg:gap-4">
+          <div className={cn(
+            "flex items-center gap-2 lg:gap-4 shrink-0",
+            isSearchOpen && "hidden sm:flex"
+          )}>
             <button 
               onClick={toggleLanguage}
               className="flex items-center gap-2 p-1.5 lg:p-2 text-slate-400 hover:text-white transition-colors bg-slate-900 rounded-full border border-slate-800"

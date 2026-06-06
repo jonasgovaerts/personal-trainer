@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,6 +26,7 @@ func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
 
 // Helper for JSON errors
 func respondError(w http.ResponseWriter, code int, message string) {
+	log.Printf("ERROR: %d - %s", code, message)
 	respondJSON(w, code, map[string]string{"error": message})
 }
 

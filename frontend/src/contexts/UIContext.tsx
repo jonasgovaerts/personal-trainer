@@ -22,6 +22,9 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const [confirmState, setConfirmState] = useState<{ message: string, onConfirm: () => void, onCancel?: () => void } | null>(null);
 
   const toast = (message: string, type: ToastType = 'info') => {
+    if (type === 'error') {
+      console.error(`[UI Error] ${message}`);
+    }
     const id = Date.now().toString();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {

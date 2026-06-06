@@ -24,13 +24,14 @@ func InitDB() {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=UTC",
 		host, user, password, dbname, port)
 
+	log.Printf("INFO: Attempting to connect to database at %s:%s", host, port)
 	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	log.Println("Connected to PostgreSQL database.")
+	log.Println("INFO: Connected to PostgreSQL database.")
 
 	// Auto-migrate the schema
 	err = DB.AutoMigrate(
@@ -62,11 +63,11 @@ func SeedDatabase(db *gorm.DB) {
 	var count int64
 	db.Model(&models.Equipment{}).Count(&count)
 	if count > 0 {
-		log.Println("Database already seeded. Skipping.")
+		log.Println("INFO: Database already seeded. Skipping.")
 		return
 	}
 
-	log.Println("Seeding database...")
+	log.Println("INFO: Seeding database...")
 
 	// 1. Seed Equipment
 	equipmentList := []models.Equipment{
@@ -283,5 +284,5 @@ func SeedDatabase(db *gorm.DB) {
 	}
 
 	db.Create(&exercises)
-	log.Println("Database seeded successfully.")
+	log.Println("INFO: Database seeded successfully.")
 }

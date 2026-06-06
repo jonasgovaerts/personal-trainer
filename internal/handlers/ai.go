@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"os"
 
@@ -66,6 +67,7 @@ func AnalyzeNutrition(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mode := r.URL.Query().Get("mode")
+	log.Printf("INFO: Starting AI analysis in %s mode", mode)
 	var prompt genai.Text
 	if mode == "barcode" {
 		prompt = genai.Text(`Analyze this image of a barcode or nutrition label. Provide a single JSON object with the following fields: "name" (a short descriptive name), "calories" (integer estimate of the calories per 100 grams), "protein" (float estimate per 100g), "carbs" (float estimate per 100g), and "fat" (float estimate per 100g). Example: {"name": "Protein Bar", "calories": 350, "protein": 20.0, "carbs": 30.0, "fat": 10.0}. Return ONLY valid JSON, no markdown formatting.`)
@@ -75,19 +77,23 @@ func AnalyzeNutrition(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := model.GenerateContent(ctx, prompt, genai.ImageData(format, imgData))
 	if err != nil {
+		log.Printf("ERROR: AI generation failed: %v", err)
 		respondError(w, http.StatusInternalServerError, "Failed to analyze image: "+err.Error())
 		return
 	}
 
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		log.Printf("ERROR: AI returned no candidates or parts")
 		respondError(w, http.StatusInternalServerError, "No analysis returned")
 		return
 	}
 
 	part := resp.Candidates[0].Content.Parts[0]
 	if textPart, ok := part.(genai.Text); ok {
-		// Clean up potential markdown formatting
 		jsonStr := string(textPart)
+		log.Printf("INFO: AI raw response: %s", jsonStr)
+		
+		// Clean up potential markdown formatting
 		if len(jsonStr) >= 7 && jsonStr[:7] == "```json" {
 			jsonStr = jsonStr[7:]
 		}
@@ -98,6 +104,7 @@ func AnalyzeNutrition(w http.ResponseWriter, r *http.Request) {
 		var result AnalyzeResponse
 		err = json.Unmarshal([]byte(jsonStr), &result)
 		if err != nil {
+			log.Printf("ERROR: Failed to unmarshal AI response: %v | Raw: %s", err, jsonStr)
 			respondError(w, http.StatusInternalServerError, "Failed to parse AI response")
 			return
 		}
@@ -105,5 +112,6 @@ func AnalyzeNutrition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("ERROR: AI response was not Text")
 	respondError(w, http.StatusInternalServerError, "Unexpected AI response format")
 }

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/user/personal-trainer/internal/db"
 	"github.com/user/personal-trainer/internal/handlers"
@@ -53,6 +54,38 @@ func main() {
 	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
+}
+
+// corsMiddleware adds basic CORS headers for local development
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+StatusOK}
+		
+		next.ServeHTTP(rw, r)
+		
+		duration := time.Since(start)
+		log.Printf(
+			"[%s] %s %s %d %s %s",
+			r.RemoteAddr,
+			r.Method,
+			r.URL.Path,
+			rw.status,
+			duration,
+			r.UserAgent(),
+		)
+	})
 }
 
 // corsMiddleware adds basic CORS headers for local development
