@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Camera, ScanBarcode, Plus, Apple, CupSoda, Target, 
-  Sparkles, Activity, X, Trash2, Calendar, ChevronLeft, ChevronRight 
+  Sparkles, Activity, X, Trash2, Calendar, ChevronLeft, ChevronRight, Search as SearchIcon, Loader2, Utensils
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
@@ -12,6 +12,7 @@ import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, 
   isSameDay, isToday, subMonths, addMonths 
 } from 'date-fns';
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 interface LogItem {
   id: string;
@@ -23,6 +24,16 @@ interface LogItem {
   type: 'food' | 'drink';
   meal: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   timestamp: Date;
+}
+
+interface StagedItem {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  brand?: string;
+  image?: string;
 }
 
 export default function Nutrition() {
@@ -37,10 +48,13 @@ export default function Nutrition() {
 
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [historyLogs, setHistoryLogs] = useState<LogItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'manual' | 'ai' | 'barcode'>('manual');
+  const [activeTab, setActiveTab] = useState<'manual' | 'ai' | 'barcode' | 'search'>('search');
   const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
   const [viewMode, setViewMode] = useState<'today' | 'month'>('today');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Meal Builder State
+  const [stagedItems, setStagedItems] = useState<StagedItem[]>([]);
 
   useEffect(() => {
     if (user?.goal_calories) {
@@ -53,7 +67,7 @@ export default function Nutrition() {
     fetch('/api/nutrition?user_id=1')
       .then(res => res.json())
       .then(data => {
-        if (data) {
+        if (data && Array.isArray(data)) {
           const formattedData = data.map((item: any) => ({
             id: item.id.toString(),
             name: item.name,
@@ -76,7 +90,7 @@ export default function Nutrition() {
     fetch('/api/nutrition?user_id=1&days=31')
       .then(res => res.json())
       .then(data => {
-        if (data) {
+        if (data && Array.isArray(data)) {
           const formattedData = data.map((item: any) => ({
             id: item.id.toString(),
             name: item.name,
@@ -99,11 +113,6 @@ export default function Nutrition() {
     fetchMonthLogs();
   }, []);
   
-  // Persist Goal to LocalStorage
-  useEffect(() => {
-    localStorage.setItem('nutrition_goal', goal.toString());
-  }, [goal]);
-
   // Manual Entry State
   const [manualName, setManualName] = useState('');
   const [manualCal, setManualCal] = useState('');
@@ -111,11 +120,19 @@ export default function Nutrition() {
   const [manualC, setManualC] = useState('');
   const [manualF, setManualF] = useState('');
 
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Barcode State
+  const [barcodeInput, setBarcodeInput] = useState('');
+
   // AI & Camera State
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const [aiResult, setAiResult] = useState<{ name: string, caloriesPer100g: number, p: number, c: number, f: number } | null>(null);
+  const [aiResult, setAiResult] = useState<StagedItem | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -129,12 +146,35 @@ export default function Nutrition() {
   const remaining = goal - consumed;
   const progressPercent = Math.min(100, Math.max(0, (consumed / goal) * 100));
 
-  // Attach the stream to the video element once it is rendered
+  // --- Barcode Scanner Logic ---
   useEffect(() => {
-    if (isCameraOpen && videoRef.current && cameraStream) {
+    if (activeTab === 'barcode' && isCameraOpen) {
+      const scanner = new Html5QrcodeScanner(
+        "reader", 
+        { fps: 10, qrbox: { width: 250, height: 150 } }, 
+        /* verbose= */ false
+      );
+
+      scanner.render((decodedText) => {
+        handleBarcodeLookup(decodedText);
+        scanner.clear();
+        setIsCameraOpen(false);
+      }, (_error) => {
+        // scan error, usually safe to ignore
+      });
+
+      return () => {
+        scanner.clear().catch(e => console.warn("Scanner clear error", e));
+      };
+    }
+  }, [activeTab, isCameraOpen]);
+
+  // Attach the stream to the video element for AI Cam
+  useEffect(() => {
+    if (activeTab === 'ai' && isCameraOpen && videoRef.current && cameraStream) {
       videoRef.current.srcObject = cameraStream;
     }
-  }, [isCameraOpen, cameraStream]);
+  }, [activeTab, isCameraOpen, cameraStream]);
 
   // Cleanup camera stream when component unmounts
   useEffect(() => {
@@ -180,11 +220,23 @@ export default function Nutrition() {
       
       setLogs([newItem, ...logs]);
       setHistoryLogs([newItem, ...historyLogs]);
-      toast('Item logged successfully', 'success');
+      toast(`${name} added!`, 'success');
     } catch (err) {
       console.error(err);
       toast('Failed to save nutrition log.', 'error');
     }
+  };
+
+  const logMeal = async () => {
+    if (stagedItems.length === 0) return;
+    
+    confirm(`Log all ${stagedItems.length} items to ${selectedMeal}?`, async () => {
+      for (const item of stagedItems) {
+        await addLog(item.name, item.calories, item.protein, item.carbs, item.fat, 'food');
+      }
+      setStagedItems([]);
+      toast('Meal logged successfully!', 'success');
+    });
   };
 
   const deleteLog = async (id: string) => {
@@ -215,6 +267,53 @@ export default function Nutrition() {
     setManualF('');
   };
 
+  const handleSearch = async () => {
+    if (!searchQuery) return;
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/nutrition/search?q=${encodeURIComponent(searchQuery)}`);
+      const data = await res.json();
+      setSearchResults(data || []);
+    } catch (err) {
+      console.error(err);
+      toast('Search failed', 'error');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleBarcodeLookup = async (code: string) => {
+    setIsProcessing(true);
+    try {
+      const res = await fetch(`/api/nutrition/barcode?barcode=${code}`);
+      if (!res.ok) throw new Error('Product not found');
+      const data = await res.json();
+      
+      const item: StagedItem = {
+        name: data.name || 'Unknown',
+        calories: Math.round(data.calories || 0),
+        protein: data.protein || 0,
+        carbs: data.carbs || 0,
+        fat: data.fat || 0,
+        brand: data.brand,
+        image: data.image
+      };
+      
+      setAiResult(item);
+      toast(`Found ${item.name}!`, 'success');
+    } catch (err) {
+      console.error(err);
+      toast('Barcode not recognized', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const addToStage = (item: StagedItem) => {
+    setStagedItems([...stagedItems, item]);
+    toast(`Added ${item.name} to meal`, 'info');
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -230,7 +329,7 @@ export default function Nutrition() {
     formData.append('image', file, 'capture.jpg');
 
     try {
-      const res = await fetch(`/api/nutrition/analyze?mode=${activeTab}`, {
+      const res = await fetch(`/api/nutrition/analyze?mode=ai`, {
         method: 'POST',
         body: formData,
       });
@@ -241,12 +340,14 @@ export default function Nutrition() {
       }
 
       const data = await res.json();
-      const cals = data.calories || 0;
-      const p = data.protein || 0;
-      const c = data.carbs || 0;
-      const f = data.fat || 0;
       
-      setAiResult({ name: data.name || 'Unknown Item', caloriesPer100g: cals, p, c, f });
+      setAiResult({ 
+        name: data.name || 'Unknown Item', 
+        calories: data.calories || 0, 
+        protein: data.protein || 0, 
+        carbs: data.carbs || 0, 
+        fat: data.fat || 0 
+      });
       toast('Analysis complete!', 'success');
     } catch (err: any) {
       console.error(err);
@@ -257,6 +358,11 @@ export default function Nutrition() {
   };
 
   const startCamera = async () => {
+    if (activeTab === 'barcode') {
+       setIsCameraOpen(true);
+       return;
+    }
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'environment' } 
@@ -315,10 +421,10 @@ export default function Nutrition() {
 
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto space-y-8 pb-20">
+      <div className="max-w-5xl mx-auto space-y-8 pb-32">
         
         {/* Header */}
-        <div className="flex items-end justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white">{t('nutrition.title')}</h1>
             <p className="text-slate-400 mt-1">{t('nutrition.subtitle')}</p>
@@ -410,7 +516,7 @@ export default function Nutrition() {
               </div>
 
               {/* Logging Interface */}
-              <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col">
+              <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 lg:p-6 shadow-sm flex flex-col">
                 <h3 className="font-semibold text-lg text-white mb-4">{t('nutrition.logTitle')}</h3>
                 
                 {/* Meal Selector */}
@@ -427,34 +533,125 @@ export default function Nutrition() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mb-6 shrink-0">
+                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 mb-6 shrink-0 overflow-x-auto no-scrollbar">
                   <button
-                    onClick={() => setActiveTab('manual')}
-                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 rounded-lg text-xs lg:text-sm font-semibold transition-all", activeTab === 'manual' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
+                    onClick={() => setActiveTab('search')}
+                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 px-3 rounded-lg text-xs lg:text-sm font-semibold transition-all whitespace-nowrap", activeTab === 'search' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
                   >
-                    <Plus className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> {t('nutrition.tab.manual')}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('ai')}
-                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 rounded-lg text-xs lg:text-sm font-semibold transition-all", activeTab === 'ai' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
-                  >
-                    <Camera className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> {t('nutrition.tab.camera')}
+                    <SearchIcon className="w-3.5 h-3.5" /> Search
                   </button>
                   <button
                     onClick={() => setActiveTab('barcode')}
-                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 rounded-lg text-xs lg:text-sm font-semibold transition-all", activeTab === 'barcode' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
+                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 px-3 rounded-lg text-xs lg:text-sm font-semibold transition-all whitespace-nowrap", activeTab === 'barcode' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
                   >
-                    <ScanBarcode className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> {t('nutrition.tab.barcode')}
+                    <ScanBarcode className="w-3.5 h-3.5" /> Barcode
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('ai')}
+                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 px-3 rounded-lg text-xs lg:text-sm font-semibold transition-all whitespace-nowrap", activeTab === 'ai' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
+                  >
+                    <Camera className="w-3.5 h-3.5" /> AI Cam
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('manual')}
+                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 px-3 rounded-lg text-xs lg:text-sm font-semibold transition-all whitespace-nowrap", activeTab === 'manual' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Manual
                   </button>
                 </div>
 
                 {/* Tab Contents */}
-                <div className="flex-1 flex flex-col justify-center">
+                <div className="flex-1 flex flex-col">
+                  {activeTab === 'search' && (
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <input 
+                          type="text" 
+                          value={searchQuery}
+                          onChange={e => setSearchQuery(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                          placeholder="Search food (e.g. Cooked Potatoes)"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500"
+                        />
+                        <button 
+                          onClick={handleSearch}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold"
+                        >
+                          Find
+                        </button>
+                      </div>
+
+                      <div className="max-h-64 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                        {isSearching ? (
+                          <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
+                        ) : searchResults.length === 0 ? (
+                          <p className="text-center text-slate-500 py-8 text-sm italic">Lookup foods based on name...</p>
+                        ) : (
+                          searchResults.map((item, idx) => (
+                            <div key={idx} className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 flex items-center justify-between group hover:border-slate-700 transition-colors">
+                              <div className="flex items-center gap-3">
+                                {item.image ? <img src={item.image} className="w-10 h-10 rounded-lg object-cover" alt="" /> : <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center"><Apple className="w-5 h-5 text-slate-600" /></div>}
+                                <div className="min-w-0">
+                                  <p className="text-sm font-bold text-white truncate">{item.name}</p>
+                                  <p className="text-[10px] text-slate-500 uppercase font-bold">{Math.round(item.calories)} kcal / 100g • {item.brand || 'No Brand'}</p>
+                                </div>
+                              </div>
+                              <button onClick={() => addToStage({ name: item.name, calories: item.calories, protein: item.protein, carbs: item.carbs, fat: item.fat, brand: item.brand, image: item.image })} className="bg-slate-800 p-2 rounded-lg text-blue-500 hover:bg-blue-600 hover:text-white transition-all">
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'barcode' && (
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <input 
+                          type="text" 
+                          value={barcodeInput}
+                          onChange={e => setBarcodeInput(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleBarcodeLookup(barcodeInput)}
+                          placeholder="Enter barcode number..."
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500"
+                        />
+                        <button 
+                          onClick={() => handleBarcodeLookup(barcodeInput)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-emerald-600 text-white px-3 py-1 rounded-lg text-xs font-bold"
+                        >
+                          Lookup
+                        </button>
+                      </div>
+                      
+                      <div className="flex flex-col items-center justify-center text-center p-6 bg-slate-950/50 border border-dashed border-slate-700 rounded-xl min-h-[140px] relative">
+                         {isProcessing ? (
+                            <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                         ) : isCameraOpen ? (
+                            <div className="w-full max-w-sm mx-auto overflow-hidden rounded-xl bg-slate-950">
+                               <div id="reader" className="w-full"></div>
+                               <button onClick={stopCamera} className="w-full bg-red-500/10 text-red-500 py-3 font-bold text-xs uppercase tracking-widest border-t border-red-500/20">Cancel Scan</button>
+                            </div>
+                         ) : (
+                           <>
+                            <p className="text-slate-400 text-xs mb-4">Open food scanner for barcodes</p>
+                            <button onClick={startCamera} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-6 rounded-xl transition-colors flex items-center gap-2 text-sm">
+                              <Camera className="w-4 h-4" /> Start Scanner
+                            </button>
+                           </>
+                         )}
+                      </div>
+                    </div>
+                  )}
+
                   {activeTab === 'manual' && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
                         <div className="sm:col-span-3">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('nutrition.manual.name')}</label>
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('nutrition.manual.name')}</label>
                           <input 
                             type="text" 
                             value={manualName}
@@ -464,7 +661,7 @@ export default function Nutrition() {
                           />
                         </div>
                         <div className="sm:col-span-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('nutrition.manual.calories')}</label>
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('nutrition.manual.calories')}</label>
                           <input 
                             type="number" 
                             value={manualCal}
@@ -506,42 +703,28 @@ export default function Nutrition() {
                           />
                         </div>
                       </div>
-                      <button 
-                        onClick={handleManualAdd}
-                        disabled={!manualName || !manualCal}
-                        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm lg:text-base uppercase tracking-wider"
-                      >
-                        {t('nutrition.add')}
-                      </button>
+                      <div className="flex gap-2">
+                        <button onClick={() => addToStage({ name: manualName, calories: parseInt(manualCal, 10) || 0, protein: parseFloat(manualP) || 0, carbs: parseFloat(manualC) || 0, fat: parseFloat(manualF) || 0 })} disabled={!manualName || !manualCal} className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider">
+                           Add to Meal
+                        </button>
+                        <button 
+                          onClick={handleManualAdd}
+                          disabled={!manualName || !manualCal}
+                          className="flex-[1.5] bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+                        >
+                          Quick Log
+                        </button>
+                      </div>
                     </div>
                   )}
 
-                  {/* AI View */}
-                  {(activeTab === 'ai' || activeTab === 'barcode') && (
+                  {activeTab === 'ai' && (
                     <div className="flex flex-col items-center justify-center text-center p-6 bg-slate-950/50 border border-dashed border-slate-700 rounded-xl overflow-hidden relative min-h-[200px]">
                       {isProcessing ? (
                         <>
-                          <Activity className={cn("w-12 h-12 animate-spin mb-4", activeTab === 'ai' ? "text-blue-500" : "text-emerald-500")} />
-                          <p className={cn("font-semibold", activeTab === 'ai' ? "text-blue-400" : "text-emerald-400")}>
-                            {t('nutrition.ai.processing')}
-                          </p>
+                          <Activity className="w-12 h-12 animate-spin mb-4 text-blue-500" />
+                          <p className="font-semibold text-blue-400">{t('nutrition.ai.processing')}</p>
                         </>
-                      ) : aiResult ? (
-                        <div className="w-full space-y-4">
-                          <h4 className="text-xl font-bold text-white capitalize">{aiResult.name}</h4>
-                          <div className="flex justify-center gap-4 text-sm text-slate-300">
-                            <span><strong className="text-white">{aiResult.caloriesPer100g}</strong> kcal</span>
-                            <span className="text-blue-400">P: {aiResult.p}g</span>
-                          </div>
-                          <div className="flex gap-2 pt-2">
-                            <button onClick={() => setAiResult(null)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors">
-                              {t('nutrition.ai.cancel')}
-                            </button>
-                            <button onClick={() => { addLog(aiResult.name, aiResult.caloriesPer100g, aiResult.p, aiResult.c, aiResult.f, 'food'); setAiResult(null); }} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-colors">
-                              {t('nutrition.add')}
-                            </button>
-                          </div>
-                        </div>
                       ) : isCameraOpen ? (
                         <div className="absolute inset-0 z-20 flex flex-col bg-slate-950">
                           <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
@@ -553,7 +736,7 @@ export default function Nutrition() {
                         </div>
                       ) : (
                         <>
-                          {activeTab === 'ai' ? <Sparkles className="w-12 h-12 text-blue-500 mb-4" /> : <ScanBarcode className="w-12 h-12 text-emerald-500 mb-4" />}
+                          <Sparkles className="w-12 h-12 text-blue-500 mb-4" />
                           <p className="text-slate-400 text-sm mb-6 max-w-sm">{t('nutrition.ai.prompt')}</p>
                           <div className="flex gap-4">
                             <button onClick={startCamera} className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center gap-2"><Camera className="w-5 h-5" /> Take Photo</button>
@@ -563,10 +746,81 @@ export default function Nutrition() {
                       )}
                     </div>
                   )}
+                  
+                  {/* Result Result Overlay */}
+                  {aiResult && (
+                    <div className="mt-4 p-4 bg-blue-600/10 border border-blue-500/20 rounded-xl animate-in fade-in zoom-in-95 duration-300">
+                      <div className="flex items-center gap-4 mb-3">
+                        {aiResult.image ? <img src={aiResult.image} className="w-12 h-12 rounded-lg object-cover" alt="" /> : <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500"><Apple className="w-6 h-6" /></div>}
+                        <div className="min-w-0">
+                          <p className="font-bold text-white text-lg leading-tight truncate">{aiResult.name}</p>
+                          {aiResult.brand && <p className="text-xs text-blue-400 font-bold uppercase truncate">{aiResult.brand}</p>}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 mb-4">
+                        <div className="bg-slate-900/50 p-2 rounded-lg text-center">
+                          <p className="text-[10px] text-slate-500 uppercase font-bold">Kcal</p>
+                          <p className="text-sm font-bold text-white">{Math.round(aiResult.calories)}</p>
+                        </div>
+                        <div className="bg-slate-900/50 p-2 rounded-lg text-center">
+                          <p className="text-[10px] text-blue-500 uppercase font-bold">Prot</p>
+                          <p className="text-sm font-bold text-white">{aiResult.protein}g</p>
+                        </div>
+                        <div className="bg-slate-900/50 p-2 rounded-lg text-center">
+                          <p className="text-[10px] text-orange-500 uppercase font-bold">Carb</p>
+                          <p className="text-sm font-bold text-white">{aiResult.carbs}g</p>
+                        </div>
+                        <div className="bg-slate-900/50 p-2 rounded-lg text-center">
+                          <p className="text-[10px] text-emerald-500 uppercase font-bold">Fat</p>
+                          <p className="text-sm font-bold text-white">{aiResult.fat}g</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setAiResult(null)} className="flex-1 py-2 text-slate-400 font-bold text-xs uppercase hover:text-white transition-colors">Cancel</button>
+                        <button onClick={() => { addToStage(aiResult); setAiResult(null); }} className="flex-1 bg-slate-800 text-blue-400 py-2 rounded-lg font-bold text-xs uppercase hover:bg-slate-700 transition-colors">Add to Meal</button>
+                        <button onClick={() => { addLog(aiResult.name, aiResult.calories, aiResult.protein, aiResult.carbs, aiResult.fat); setAiResult(null); }} className="flex-[1.5] bg-blue-600 text-white py-2 rounded-lg font-bold text-xs uppercase shadow-lg shadow-blue-600/20 hover:bg-blue-500 transition-colors">Quick Log</button>
+                      </div>
+                    </div>
+                  )}
+
                   <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
                 </div>
               </div>
             </div>
+
+            {/* Meal Builder Floating Panel */}
+            {stagedItems.length > 0 && (
+              <div className="fixed bottom-24 lg:bottom-8 left-4 right-4 sm:left-auto sm:right-8 sm:w-80 bg-slate-900 border border-blue-500/30 rounded-2xl shadow-2xl z-[40] overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
+                 <div className="bg-blue-600 px-4 py-3 flex justify-between items-center">
+                    <div className="flex items-center gap-2 text-white">
+                       <Utensils className="w-4 h-4" />
+                       <span className="font-bold text-sm">Meal Builder</span>
+                       <span className="bg-white/20 text-[10px] px-2 py-0.5 rounded-full">{stagedItems.length}</span>
+                    </div>
+                    <button onClick={() => setStagedItems([])} className="text-blue-100 hover:text-white"><Trash2 className="w-4 h-4" /></button>
+                 </div>
+                 <div className="p-3 space-y-2 max-h-48 overflow-y-auto custom-scrollbar bg-slate-950/30">
+                    {stagedItems.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-center group bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-white truncate">{item.name}</p>
+                          <p className="text-[10px] text-slate-500 uppercase font-bold">{item.calories} kcal • {item.protein}g P</p>
+                        </div>
+                        <button onClick={() => setStagedItems(stagedItems.filter((_, i) => i !== idx))} className="text-slate-600 hover:text-red-500 transition-colors ml-2"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ))}
+                 </div>
+                 <div className="p-4 border-t border-slate-800 bg-slate-900">
+                    <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-3 uppercase tracking-wider px-1">
+                       <span>Total: {stagedItems.reduce((s, i) => s + i.calories, 0)} kcal</span>
+                       <span className="text-blue-500">{stagedItems.reduce((s, i) => s + i.protein, 0)}g P</span>
+                    </div>
+                    <button onClick={logMeal} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/20 uppercase tracking-widest text-xs">
+                       Log to {selectedMeal}
+                    </button>
+                 </div>
+              </div>
+            )}
 
             {/* Today's Log Items */}
             <div className="space-y-6">

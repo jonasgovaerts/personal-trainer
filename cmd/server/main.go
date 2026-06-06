@@ -34,6 +34,8 @@ func main() {
 	mux.HandleFunc("POST /api/nutrition", handlers.LogNutrition)
 	mux.HandleFunc("DELETE /api/nutrition/{id}", handlers.DeleteNutritionLog)
 	mux.HandleFunc("POST /api/nutrition/analyze", handlers.AnalyzeNutrition)
+	mux.HandleFunc("GET /api/nutrition/search", handlers.SearchFood)
+	mux.HandleFunc("GET /api/nutrition/barcode", handlers.GetFoodByBarcode)
 
 	// Serve static files (frontend)
 	fs := http.FileServer(http.Dir("./static"))
