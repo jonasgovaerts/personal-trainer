@@ -133,6 +133,7 @@ export default function Nutrition() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Barcode State
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -320,8 +321,10 @@ export default function Nutrition() {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery) return;
+    if (!searchQuery || isSearching) return;
     setIsSearching(true);
+    setHasSearched(true);
+    setSearchResults([]); // Clear previous results to show loading state clearly
     try {
       const res = await fetch(`/api/nutrition/search?q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
@@ -336,7 +339,7 @@ export default function Nutrition() {
   };
 
   const handleBarcodeLookup = async (code: string) => {
-    if (!code) return;
+    if (!code || isProcessing) return;
     setIsProcessing(true);
     try {
       const res = await fetch(`/api/nutrition/barcode?barcode=${code}`);
@@ -416,6 +419,7 @@ export default function Nutrition() {
   };
 
   const processFile = async (file: File | Blob) => {
+    if (isProcessing) return;
     setIsProcessing(true);
     const formData = new FormData();
     formData.append('image', file, 'capture.jpg');
@@ -666,24 +670,29 @@ export default function Nutrition() {
                         <input 
                           type="text" 
                           value={searchQuery}
+                          disabled={isSearching}
                           onChange={e => setSearchQuery(e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && handleSearch()}
                           placeholder="Search food (e.g. Cooked Potatoes)"
-                          className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
                         />
                         <button 
                           onClick={handleSearch}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold"
+                          disabled={isSearching || !searchQuery}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold disabled:opacity-50 flex items-center gap-1.5"
                         >
-                          Find
+                          {isSearching && <Loader2 className="w-3 h-3 animate-spin" />}
+                          {isSearching ? '...' : 'Find'}
                         </button>
                       </div>
 
                       <div className="max-h-64 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                         {isSearching ? (
                           <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
-                        ) : searchResults.length === 0 ? (
+                        ) : !hasSearched ? (
                           <p className="text-center text-slate-500 py-8 text-sm italic">Lookup foods based on name...</p>
+                        ) : searchResults.length === 0 ? (
+                          <p className="text-center text-slate-500 py-8 text-sm italic">No items found. Try a different name.</p>
                         ) : (
                           searchResults.map((item, idx) => (
                             <div key={idx} className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 flex items-center justify-between group hover:border-slate-700 transition-colors">
@@ -711,16 +720,19 @@ export default function Nutrition() {
                         <input 
                           type="text" 
                           value={barcodeInput}
+                          disabled={isProcessing}
                           onChange={e => setBarcodeInput(e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && handleBarcodeLookup(barcodeInput)}
                           placeholder="Enter barcode number..."
-                          className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500"
+                          className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
                         />
                         <button 
                           onClick={() => handleBarcodeLookup(barcodeInput)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-emerald-600 text-white px-3 py-1 rounded-lg text-xs font-bold"
+                          disabled={isProcessing || !barcodeInput}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-emerald-600 text-white px-3 py-1 rounded-lg text-xs font-bold disabled:opacity-50 flex items-center gap-1.5"
                         >
-                          Lookup
+                          {isProcessing && <Loader2 className="w-3 h-3 animate-spin" />}
+                          {isProcessing ? '...' : 'Lookup'}
                         </button>
                       </div>
                       
