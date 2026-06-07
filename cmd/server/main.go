@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/user/personal-trainer/internal/db"
@@ -38,9 +40,24 @@ func main() {
 	mux.HandleFunc("GET /api/nutrition/search", handlers.SearchFood)
 	mux.HandleFunc("GET /api/nutrition/barcode", handlers.GetFoodByBarcode)
 
-	// Serve static files (frontend)
-	fs := http.FileServer(http.Dir("./static"))
-	mux.Handle("/", fs)
+	// Serve static files (frontend) with SPA fallback
+	staticPath := "./static"
+	indexPath := "index.html"
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// If the path contains a dot (like .js, .css, .png), it's likely a static asset
+		// Otherwise, or if the file doesn't exist, serve index.html
+		path := filepath.Join(staticPath, r.URL.Path)
+		
+		// Use Stat to check if file exists
+		fi, err := os.Stat(path)
+		if os.IsNotExist(err) || fi.IsDir() || !strings.Contains(r.URL.Path, ".") {
+			http.ServeFile(w, r, filepath.Join(staticPath, indexPath))
+			return
+		}
+
+		// Otherwise serve the file normally
+		http.FileServer(http.Dir(staticPath)).ServeHTTP(w, r)
+	})
 
 	// Wrap mux with middleware chain
 	handler := loggingMiddleware(corsMiddleware(mux))
