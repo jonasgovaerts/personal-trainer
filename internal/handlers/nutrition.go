@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -141,14 +142,22 @@ func GetFoodByBarcode(w http.ResponseWriter, r *http.Request) {
 	product, _ := result["product"].(map[string]interface{})
 	nutriments, _ := product["nutriments"].(map[string]interface{})
 
+	// Robustly extract calories
+	calories := 0.0
+	if val, ok := nutriments["energy-kcal_100g"].(float64); ok {
+		calories = val
+	} else if val, ok := nutriments["energy_100g"].(float64); ok {
+		calories = val / 4.184
+	}
+
 	// Map to our simplified format
 	data := map[string]interface{}{
 		"name":     product["product_name"],
 		"brand":    product["brands"],
-		"calories": nutriments["energy-kcal_100g"],
-		"protein":  nutriments["proteins_100g"],
-		"carbs":    nutriments["carbohydrates_100g"],
-		"fat":      nutriments["fat_100g"],
+		"calories": calories,
+		"protein":  getFloat(nutriments, "proteins_100g"),
+		"carbs":    getFloat(nutriments, "carbohydrates_100g"),
+		"fat":      getFloat(nutriments, "fat_100g"),
 		"image":    product["image_url"],
 	}
 
@@ -163,39 +172,68 @@ func SearchFood(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url := "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" + query + "&json=1&page_size=20"
-	resp, err := http.Get(url)
+	// Use url.Values to safely encode the query parameters
+	params := url.Values{}
+	params.Add("search_terms", query)
+	params.Add("search_simple", "1")
+	params.Add("action", "process")
+	params.Add("json", "1")
+	params.Add("page_size", "20")
+
+	apiURL := "https://world.openfoodfacts.org/cgi/search.pl?" + params.Encode()
+	resp, err := http.Get(apiURL)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to reach Open Food Facts")
 		return
 	}
 	defer resp.Body.Close()
 
-	var result map[string]interface{}
+	var result struct {
+		Products []map[string]interface{} `json:"products"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to parse response")
 		return
 	}
 
-	products, _ := result["products"].([]interface{})
 	var searchResults []map[string]interface{}
-
-	for _, p := range products {
-		product, _ := p.(map[string]interface{})
+	for _, product := range result.Products {
 		nutriments, _ := product["nutriments"].(map[string]interface{})
 
+		// Robustly extract calories
+		calories := 0.0
+		if val, ok := nutriments["energy-kcal_100g"].(float64); ok {
+			calories = val
+		} else if val, ok := nutriments["energy_100g"].(float64); ok {
+			// Convert kJ to kcal if kcal is missing (1 kcal = 4.184 kJ)
+			calories = val / 4.184
+		}
+
+		// Only add if it has a name
+		name, _ := product["product_name"].(string)
+		if name == "" {
+			continue
+		}
+
 		searchResults = append(searchResults, map[string]interface{}{
-			"name":     product["product_name"],
+			"name":     name,
 			"brand":    product["brands"],
-			"calories": nutriments["energy-kcal_100g"],
-			"protein":  nutriments["proteins_100g"],
-			"carbs":    nutriments["carbohydrates_100g"],
-			"fat":      nutriments["fat_100g"],
+			"calories": calories,
+			"protein":  getFloat(nutriments, "proteins_100g"),
+			"carbs":    getFloat(nutriments, "carbohydrates_100g"),
+			"fat":      getFloat(nutriments, "fat_100g"),
 			"image":    product["image_small_url"],
 		})
 	}
 
 	respondJSON(w, http.StatusOK, searchResults)
+}
+
+func getFloat(m map[string]interface{}, key string) float64 {
+	if val, ok := m[key].(float64); ok {
+		return val
+	}
+	return 0.0
 }
 
 // DeleteNutritionLog deletes a specific nutrition log
