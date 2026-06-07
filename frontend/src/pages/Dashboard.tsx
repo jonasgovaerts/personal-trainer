@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronRight, Dumbbell, Flame, Trophy, Apple, Activity, Send, Sparkles, Loader2, X, Trash2 } from 'lucide-react';
+import { ChevronRight, Dumbbell, Flame, Trophy, Apple, Activity, Send, Sparkles, Loader2, X, Trash2, Paperclip, FileText } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -34,28 +34,49 @@ export default function Dashboard() {
   // Chat State
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<{role: 'user'|'ai', text: string}[]>([
-    { role: 'ai', text: "Hey! I'm your AI fitness coach. Ask me anything about your workouts or nutrition!" }
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [chatMessages, setChatMessages] = useState<{role: 'user'|'ai', text: string, file?: string}[]>([
+    { role: 'ai', text: "Hey! I'm your AI fitness coach. Ask me anything about your workouts or nutrition! You can also upload .gpx or .tcx files from Strava/Garmin for analysis." }
   ]);
   const [isChatLoading, setIsChatLoading] = useState(false);
 
+  const fileChatRef = React.useRef<HTMLInputElement>(null);
+
   const handleSendMessage = async () => {
-    if (!chatInput.trim() || isChatLoading) return;
+    if ((!chatInput.trim() && !selectedFile) || isChatLoading) return;
     
     const userMsg = chatInput.trim();
-    setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    const fileName = selectedFile?.name;
+    setChatMessages(prev => [...prev, { role: 'user', text: userMsg || (fileName ? `Analyzed file: ${fileName}` : ''), file: fileName }]);
+    
+    const formData = new FormData();
+    formData.append('message', userMsg);
+    if (selectedFile) {
+      formData.append('file', selectedFile);
+    }
+
     setChatInput('');
+    setSelectedFile(null);
     setIsChatLoading(true);
 
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg })
+        body: formData
       });
       if (!res.ok) throw new Error('Chat failed');
       const data = await res.json();
       setChatMessages(prev => [...prev, { role: 'ai', text: data.reply }]);
+      
+      // If AI found burned calories, refresh history and user to update the overview
+      if (data.burned_calories) {
+        toast(`Logged ${data.burned_calories} kcal from ${data.activity_name || 'workout'}!`, 'success');
+        
+        // Refresh history
+        fetch('/api/workouts/history?user_id=1')
+          .then(res => res.json())
+          .then(workoutsData => setHistory(Array.isArray(workoutsData) ? workoutsData : []));
+      }
     } catch (err) {
       console.error(err);
       toast('Failed to get coach response', 'error');
@@ -173,8 +194,16 @@ export default function Dashboard() {
   const displayVolume = totalVolume > 0 ? `${totalVolume} kg` : "0 kg";
   const displayStreak = totalWorkouts > 0 ? "1 Day" : "0 Days";
 
-  // Calculate today's nutrition
+  // Calculate today's nutrition & workouts expenditure
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const burnedCals = Array.isArray(history) 
+    ? history
+        .filter(w => format(parseISO(w.date), 'yyyy-MM-dd') === todayStr)
+        .reduce((sum, item) => sum + (item.calories_burned || 0), 0) 
+    : 0;
+
   const consumedCals = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.calories || 0), 0) : 0;
+  const netConsumedCals = Math.max(0, consumedCals - burnedCals);
   const consumedP = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.protein || 0), 0) : 0;
   const consumedC = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.carbs || 0), 0) : 0;
   const consumedF = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.fat || 0), 0) : 0;
@@ -205,7 +234,7 @@ export default function Dashboard() {
           <StatCard title={t('dashboard.stats.workouts')} value={totalWorkouts.toString()} icon={<Dumbbell className="w-5 h-5 text-blue-500"/>} trend={totalWorkouts > 0 ? "+1" : "0"} positive={totalWorkouts > 0} />
           <StatCard title={t('dashboard.stats.streak')} value={displayStreak} icon={<Flame className="w-5 h-5 text-orange-500"/>} trend={totalWorkouts > 0 ? t('dashboard.stats.streak.msg') : "Start!"} />
           <StatCard title={t('dashboard.stats.volume')} value={displayVolume} icon={<Trophy className="w-5 h-5 text-yellow-500"/>} trend={totalVolume > 0 ? "+Vol" : ""} positive={totalVolume > 0} />
-          <StatCard title="Today's KCAL" value={`${consumedCals}`} icon={<Apple className="w-5 h-5 text-emerald-500"/>} trend={`${goal - consumedCals} rem.`} positive={consumedCals <= goal} />
+          <StatCard title="Today's KCAL" value={`${netConsumedCals}`} icon={<Apple className="w-5 h-5 text-emerald-500"/>} trend={`${goal - netConsumedCals} rem.`} positive={netConsumedCals <= goal} />
         </div>
 
         {/* Today's Nutrition Summary */}
@@ -220,14 +249,15 @@ export default function Dashboard() {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
             <div className="flex flex-col justify-center">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Calories</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Net Calories</span>
               <div className="flex items-end gap-1.5">
-                <span className="text-xl lg:text-2xl font-bold text-white">{consumedCals}</span>
+                <span className="text-xl lg:text-2xl font-bold text-white">{netConsumedCals}</span>
                 <span className="text-[10px] lg:text-sm font-medium text-slate-400 mb-1">/ {goal}</span>
               </div>
               <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
-                <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedCals / goal) * 100)}%` }} />
+                <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, (netConsumedCals / goal) * 100)}%` }} />
               </div>
+              {burnedCals > 0 && <span className="text-[9px] font-bold text-emerald-500 uppercase mt-1">-{burnedCals} kcal burned</span>}
             </div>
             
             <div className="flex flex-col justify-center">
@@ -387,20 +417,48 @@ export default function Dashboard() {
             </div>
 
             <div className="p-4 bg-slate-900 border-t border-slate-800 shrink-0">
+                {selectedFile && (
+                  <div className="mb-2 p-2 bg-blue-600/10 border border-blue-500/20 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <FileText className="w-4 h-4 text-blue-500 shrink-0" />
+                      <span className="text-xs text-blue-400 truncate">{selectedFile.name}</span>
+                    </div>
+                    <button onClick={() => setSelectedFile(null)} className="text-slate-500 hover:text-red-500 transition-colors">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
                 <form 
                   onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
                   className="flex items-center gap-2"
                 >
                   <input 
+                    type="file" 
+                    ref={fileChatRef} 
+                    className="hidden" 
+                    accept=".gpx,.tcx" 
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => fileChatRef.current?.click()}
+                    className={cn(
+                      "p-3 rounded-xl transition-all",
+                      selectedFile ? "bg-blue-600/20 text-blue-400" : "bg-slate-950 border border-slate-700 text-slate-500 hover:text-slate-300"
+                    )}
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+                  <input 
                       type="text" 
                       value={chatInput}
                       onChange={e => setChatInput(e.target.value)}
-                      placeholder="Ask about foods or exercises..."
+                      placeholder="Ask or upload .gpx/.tcx..."
                       className="flex-1 bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                   />
                   <button 
                       type="submit"
-                      disabled={!chatInput.trim() || isChatLoading}
+                      disabled={(!chatInput.trim() && !selectedFile) || isChatLoading}
                       className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white p-3 rounded-xl transition-all shadow-lg shadow-blue-600/20"
                   >
                       <Send className="w-5 h-5" />

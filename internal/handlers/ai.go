@@ -3,12 +3,17 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/google/generative-ai-go/genai"
+	"github.com/user/personal-trainer/internal/db"
+	"github.com/user/personal-trainer/internal/models"
 	"google.golang.org/api/option"
 )
 
@@ -26,7 +31,9 @@ type ChatRequest struct {
 }
 
 type ChatResponse struct {
-	Reply string `json:"reply"`
+	Reply          string `json:"reply"`
+	BurnedCalories int    `json:"burned_calories,omitempty"`
+	ActivityName   string `json:"activity_name,omitempty"`
 }
 
 // AnalyzeNutrition handles AI analysis of food or barcodes
@@ -135,14 +142,24 @@ func AnalyzeNutrition(w http.ResponseWriter, r *http.Request) {
 	respondError(w, http.StatusInternalServerError, "Unexpected AI response format")
 }
 
-// ChatWithAI handles general fitness and nutrition questions
+// ChatWithAI handles general fitness and nutrition questions, and workout file analysis
 func ChatWithAI(w http.ResponseWriter, r *http.Request) {
-	var req ChatRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// Parse multipart form to handle potential file uploads
+	err := r.ParseMultipartForm(10 << 20) // 10 MB limit
+	if err != nil {
+		// If it fails, try to see if it's just a JSON request
+		var req ChatRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+			handleSimpleChat(w, req.Message)
+			return
+		}
 		respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	userMessage := r.FormValue("message")
+	file, header, err := r.FormFile("file")
+	
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		respondError(w, http.StatusInternalServerError, "Gemini API Key is not configured")
@@ -159,12 +176,102 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 
 	model := client.GenerativeModel("gemini-2.5-flash")
 	
-	// Add some system context to the chat
-	prompt := "You are a professional fitness coach and nutrition expert. Answer the following question briefly and encouragingly: " + req.Message
+	var prompt []genai.Part
+	systemPrompt := "You are a professional fitness coach. "
+	
+	if err == nil {
+		defer file.Close()
+		fileBytes, _ := io.ReadAll(file)
+		fileName := header.Filename
+		
+		systemPrompt += fmt.Sprintf("The user has uploaded a fitness activity file named '%s'. ", fileName)
+		systemPrompt += "Analyze this file (it might be GPX, TCX, or similar XML-based fitness data). "
+		systemPrompt += "Extract the activity type, duration, and specifically the ESTIMATED CALORIES BURNED. "
+		systemPrompt += "Return your response in two parts: 1. A friendly encouraging message about the workout. "
+		systemPrompt += "2. A JSON-like block at the end (but still within your text response) in the format: [WORKOUT_DATA:{\"calories\": 450, \"name\": \"Morning Run\"}]. "
+		
+		prompt = append(prompt, genai.Text(systemPrompt))
+		prompt = append(prompt, genai.Text("File Content: "+string(fileBytes)))
+	} else {
+		systemPrompt += "Answer the following question briefly and encouragingly: "
+		prompt = append(prompt, genai.Text(systemPrompt))
+	}
+
+	prompt = append(prompt, genai.Text(userMessage))
+
+	resp, err := model.GenerateContent(ctx, prompt...)
+	if err != nil {
+		log.Printf("ERROR: AI chat failed: %v", err)
+		respondError(w, http.StatusInternalServerError, "Failed to get AI response")
+		return
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		respondError(w, http.StatusInternalServerError, "No response from AI")
+		return
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	if textPart, ok := part.(genai.Text); ok {
+		reply := string(textPart)
+		
+		// Parse workout data if present
+		response := ChatResponse{Reply: reply}
+		
+		workoutTag := "[WORKOUT_DATA:"
+		if idx := strings.Index(reply, workoutTag); idx != -1 {
+			endIdx := strings.Index(reply[idx:], "]")
+			if endIdx != -1 {
+				jsonStr := reply[idx+len(workoutTag) : idx+endIdx]
+				var data struct {
+					Calories int    `json:"calories"`
+					Name     string `json:"name"`
+				}
+				if err := json.Unmarshal([]byte(jsonStr), &data); err == nil {
+					response.BurnedCalories = data.Calories
+					response.ActivityName = data.Name
+					
+					// Auto-save the workout to the database
+					newWorkout := models.Workout{
+						UserID:         1, // Hardcoded for prototype
+						Date:           time.Now(),
+						Notes:          "Imported via AI Coach: " + data.Name,
+						CaloriesBurned: data.Calories,
+					}
+					db.DB.Create(&newWorkout)
+				}
+				// Clean the tag from the visible reply
+				response.Reply = strings.TrimSpace(reply[:idx] + reply[idx+endIdx+1:])
+			}
+		}
+		
+		respondJSON(w, http.StatusOK, response)
+		return
+	}
+
+	respondError(w, http.StatusInternalServerError, "Unexpected AI response format")
+}
+
+func handleSimpleChat(w http.ResponseWriter, message string) {
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	if apiKey == "" {
+		respondError(w, http.StatusInternalServerError, "Gemini API Key is not configured")
+		return
+	}
+
+	ctx := context.Background()
+	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to initialize AI client")
+		return
+	}
+	defer client.Close()
+
+	model := client.GenerativeModel("gemini-2.5-flash")
+	prompt := "You are a professional fitness coach and nutrition expert. Answer the following question briefly and encouragingly: " + message
 
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
-		log.Printf("ERROR: AI chat failed: %v", err)
 		respondError(w, http.StatusInternalServerError, "Failed to get AI response")
 		return
 	}
@@ -182,3 +289,4 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 
 	respondError(w, http.StatusInternalServerError, "Unexpected AI response format")
 }
+

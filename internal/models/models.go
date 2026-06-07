@@ -45,11 +45,12 @@ type Exercise struct {
 
 // Workout represents a training session.
 type Workout struct {
-	ID      uint         `json:"id" gorm:"primarykey"`
-	UserID  uint         `json:"user_id"`
-	Date    time.Time    `json:"date" gorm:"type:date;default:CURRENT_DATE"`
-	Notes   string       `json:"notes" gorm:"type:text"`
-	Logs    []WorkoutLog `json:"logs" gorm:"foreignKey:WorkoutID"`
+	ID             uint         `json:"id" gorm:"primarykey"`
+	UserID         uint         `json:"user_id"`
+	Date           time.Time    `json:"date" gorm:"type:date;default:CURRENT_DATE"`
+	Notes          string       `json:"notes" gorm:"type:text"`
+	CaloriesBurned int          `json:"calories_burned"`
+	Logs           []WorkoutLog `json:"logs" gorm:"foreignKey:WorkoutID"`
 }
 
 // WorkoutLog represents a set within a workout.
