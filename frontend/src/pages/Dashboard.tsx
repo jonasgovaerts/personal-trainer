@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronRight, Dumbbell, Flame, Trophy, Apple, Activity, Send, Sparkles, Loader2, X } from 'lucide-react';
+import { ChevronRight, Dumbbell, Flame, Trophy, Apple, Activity, Send, Sparkles, Loader2, X, Trash2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [newWeight, setNewWeight] = useState('');
 
   // Chat State
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<{role: 'user'|'ai', text: string}[]>([
     { role: 'ai', text: "Hey! I'm your AI fitness coach. Ask me anything about your workouts or nutrition!" }
@@ -330,71 +331,94 @@ export default function Dashboard() {
           
         </div>
 
-        {/* AI Coach Chat Section */}
-        <div className="bg-slate-900 border border-blue-500/20 rounded-2xl overflow-hidden shadow-xl">
-           <div className="bg-blue-600/10 p-4 border-b border-blue-500/20 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-white" />
-                 </div>
-                 <div>
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">AI Coach</h3>
-                    <div className="flex items-center gap-1.5">
-                       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                       <span className="text-[10px] text-slate-400 font-medium">Online</span>
-                    </div>
-                 </div>
-              </div>
-              <button onClick={() => setChatMessages([{ role: 'ai', text: "Chat cleared! How else can I help?" }])} className="text-slate-500 hover:text-slate-300 transition-colors">
-                 <X className="w-4 h-4" />
-              </button>
-           </div>
-           
-           <div className="h-64 overflow-y-auto p-4 space-y-4 bg-slate-950/30 custom-scrollbar">
-              {chatMessages.map((msg, idx) => (
-                 <div key={idx} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
-                    <div className={cn(
-                       "max-w-[85%] p-3 rounded-2xl text-sm shadow-sm",
-                       msg.role === 'user' 
-                        ? "bg-blue-600 text-white rounded-tr-none" 
-                        : "bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700"
-                    )}>
-                       {msg.text}
-                    </div>
-                 </div>
-              ))}
-              {isChatLoading && (
-                 <div className="flex justify-start">
-                    <div className="bg-slate-800 border border-slate-700 p-3 rounded-2xl rounded-tl-none flex items-center gap-2">
-                       <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                       <span className="text-xs text-slate-400">Coach is thinking...</span>
-                    </div>
-                 </div>
-              )}
-           </div>
+        {/* AI Coach Chat Section - Mobile Floating & Desktop Fixed */}
+        <div className={cn(
+          "transition-all duration-300 z-[45]",
+          "lg:relative lg:block lg:translate-y-0 lg:opacity-100", // Desktop: Fixed section
+          isChatOpen 
+            ? "fixed inset-x-4 bottom-24 top-20 opacity-100 translate-y-0" // Mobile Open
+            : "fixed bottom-24 right-4 w-14 h-14 rounded-full overflow-hidden translate-y-20 opacity-0 pointer-events-none" // Mobile Closed (hidden by FAB)
+        )}>
+          <div className="bg-slate-900 border border-blue-500/20 rounded-2xl overflow-hidden shadow-2xl h-full flex flex-col">
+            <div className="bg-blue-600/10 p-4 border-b border-blue-500/20 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                      <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider">AI Coach</h3>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                        <span className="text-[10px] text-slate-400 font-medium">Online</span>
+                      </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setChatMessages([{ role: 'ai', text: "Chat cleared! How else can I help?" }])} className="text-slate-500 hover:text-slate-300 transition-colors p-1" title="Clear Chat">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setIsChatOpen(false)} className="lg:hidden text-slate-400 hover:text-white p-1">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/30 custom-scrollbar min-h-[150px]">
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
+                      <div className={cn(
+                        "max-w-[85%] p-3 rounded-2xl text-sm shadow-sm",
+                        msg.role === 'user' 
+                          ? "bg-blue-600 text-white rounded-tr-none" 
+                          : "bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700"
+                      )}>
+                        {msg.text}
+                      </div>
+                  </div>
+                ))}
+                {isChatLoading && (
+                  <div className="flex justify-start">
+                      <div className="bg-slate-800 border border-slate-700 p-3 rounded-2xl rounded-tl-none flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                        <span className="text-xs text-slate-400">Coach is thinking...</span>
+                      </div>
+                  </div>
+                )}
+            </div>
 
-           <div className="p-4 bg-slate-900 border-t border-slate-800">
-              <form 
-                onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                className="flex items-center gap-2"
-              >
-                 <input 
-                    type="text" 
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
-                    placeholder="Ask about foods or exercises..."
-                    className="flex-1 bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
-                 />
-                 <button 
-                    type="submit"
-                    disabled={!chatInput.trim() || isChatLoading}
-                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white p-3 rounded-xl transition-all shadow-lg shadow-blue-600/20"
-                 >
-                    <Send className="w-5 h-5" />
-                 </button>
-              </form>
-           </div>
+            <div className="p-4 bg-slate-900 border-t border-slate-800 shrink-0">
+                <form 
+                  onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
+                  className="flex items-center gap-2"
+                >
+                  <input 
+                      type="text" 
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      placeholder="Ask about foods or exercises..."
+                      className="flex-1 bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                  <button 
+                      type="submit"
+                      disabled={!chatInput.trim() || isChatLoading}
+                      className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white p-3 rounded-xl transition-all shadow-lg shadow-blue-600/20"
+                  >
+                      <Send className="w-5 h-5" />
+                  </button>
+                </form>
+            </div>
+          </div>
         </div>
+
+        {/* Mobile FAB for AI Coach */}
+        {!isChatOpen && (
+          <button 
+            onClick={() => setIsChatOpen(true)}
+            className="lg:hidden fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-blue-600/40 animate-in zoom-in duration-300 z-40 border-4 border-slate-950"
+          >
+            <Sparkles className="w-6 h-6" />
+          </button>
+        )}
 
       </div>
 
