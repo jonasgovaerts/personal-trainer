@@ -90,6 +90,7 @@ type BarcodeProduct struct {
 	Protein   float64   `json:"protein"`
 	Carbs     float64   `json:"carbs"`
 	Fat       float64   `json:"fat"`
+	Type      string    `json:"type" gorm:"size:20"`
 	Image     string    `json:"image"`
 	CreatedAt time.Time `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"default:CURRENT_TIMESTAMP"`

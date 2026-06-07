@@ -691,7 +691,7 @@ export default function Nutrition() {
                                 {item.image ? <img src={item.image} className="w-10 h-10 rounded-lg object-cover shrink-0" alt="" /> : <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center shrink-0"><Apple className="w-5 h-5 text-slate-600" /></div>}
                                 <div className="min-w-0">
                                   <p className="text-sm font-bold text-white truncate">{item.name}</p>
-                                  <p className="text-[10px] text-slate-500 uppercase font-bold">{Math.round(Number(item.calories) || 0)} kcal / 100g • {item.brand || 'No Brand'}</p>
+                                  <p className="text-[10px] text-slate-500 uppercase font-bold">{Math.round(Number(item.calories) || 0)} kcal / 100{item.type === 'drink' ? 'ml' : 'g'} • {item.brand || 'No Brand'}</p>
                                 </div>
                               </div>
                               <button onClick={() => triggerVerification(item)} className="bg-slate-800 p-2 rounded-lg text-blue-500 hover:bg-blue-600 hover:text-white transition-all ml-4 shrink-0">
@@ -890,6 +890,21 @@ export default function Nutrition() {
                   </div>
                   
                   <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
+                    <div className="flex gap-2 p-1 bg-slate-950 border border-slate-800 rounded-2xl">
+                      <button 
+                        onClick={() => setVerificationItem(verificationItem ? {...verificationItem, type: 'food'} : null)}
+                        className={cn("flex-1 py-2 text-[10px] font-bold rounded-xl transition-all", verificationItem?.type === 'food' ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-400")}
+                      >
+                        FOOD (g)
+                      </button>
+                      <button 
+                        onClick={() => setVerificationItem(verificationItem ? {...verificationItem, type: 'drink'} : null)}
+                        className={cn("flex-1 py-2 text-[10px] font-bold rounded-xl transition-all", verificationItem?.type === 'drink' ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-400")}
+                      >
+                        DRINK (ml)
+                      </button>
+                    </div>
+
                     <div className="flex items-center gap-4">
                        {verificationItem.image ? (
                           <img src={verificationItem.image} className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-800 shadow-md shrink-0" alt="" />

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/user/personal-trainer/internal/db"
@@ -87,6 +88,7 @@ func LogNutrition(w http.ResponseWriter, r *http.Request) {
 			product.Fat = req.Fat
 		}
 		
+		product.Type = req.Type
 		product.UpdatedAt = time.Now()
 		db.DB.Save(&product)
 	}
@@ -113,6 +115,7 @@ func GetFoodByBarcode(w http.ResponseWriter, r *http.Request) {
 			"carbs":    localProduct.Carbs,
 			"fat":      localProduct.Fat,
 			"image":    localProduct.Image,
+			"type":     localProduct.Type,
 			"source":   "local",
 		}
 		respondJSON(w, http.StatusOK, data)
@@ -159,6 +162,7 @@ func GetFoodByBarcode(w http.ResponseWriter, r *http.Request) {
 		"carbs":    getFloat(nutriments, "carbohydrates_100g"),
 		"fat":      getFloat(nutriments, "fat_100g"),
 		"image":    product["image_url"],
+		"type":     determineType(product),
 	}
 
 	respondJSON(w, http.StatusOK, data)
@@ -223,10 +227,30 @@ func SearchFood(w http.ResponseWriter, r *http.Request) {
 			"carbs":    getFloat(nutriments, "carbohydrates_100g"),
 			"fat":      getFloat(nutriments, "fat_100g"),
 			"image":    product["image_small_url"],
+			"type":     determineType(product),
 		})
 	}
 
 	respondJSON(w, http.StatusOK, searchResults)
+}
+
+func determineType(product map[string]interface{}) string {
+	name, _ := product["product_name"].(string)
+	categories, _ := product["categories"].(string)
+	
+	// Lowercase for comparison
+	ln := strings.ToLower(name)
+	lc := strings.ToLower(categories)
+	
+	drinkKeywords := []string{"cola", "coffee", "soda", "juice", "water", "drink", "milk", "tea", "beer", "wine", "spirit", "liquid"}
+	
+	for _, kw := range drinkKeywords {
+		if strings.Contains(ln, kw) || strings.Contains(lc, kw) {
+			return "drink"
+		}
+	}
+	
+	return "food"
 }
 
 func getFloat(m map[string]interface{}, key string) float64 {
