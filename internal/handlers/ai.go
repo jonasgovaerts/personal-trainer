@@ -21,6 +21,14 @@ type AnalyzeResponse struct {
 	Type     string  `json:"type"`
 }
 
+type ChatRequest struct {
+	Message string `json:"message"`
+}
+
+type ChatResponse struct {
+	Reply string `json:"reply"`
+}
+
 // AnalyzeNutrition handles AI analysis of food or barcodes
 func AnalyzeNutrition(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(10 << 20) // 10 MB limit
@@ -124,5 +132,53 @@ func AnalyzeNutrition(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("ERROR: AI response was not Text")
+	respondError(w, http.StatusInternalServerError, "Unexpected AI response format")
+}
+
+// ChatWithAI handles general fitness and nutrition questions
+func ChatWithAI(w http.ResponseWriter, r *http.Request) {
+	var req ChatRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	if apiKey == "" {
+		respondError(w, http.StatusInternalServerError, "Gemini API Key is not configured")
+		return
+	}
+
+	ctx := context.Background()
+	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to initialize AI client")
+		return
+	}
+	defer client.Close()
+
+	model := client.GenerativeModel("gemini-2.5-flash")
+	
+	// Add some system context to the chat
+	prompt := "You are a professional fitness coach and nutrition expert. Answer the following question briefly and encouragingly: " + req.Message
+
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		log.Printf("ERROR: AI chat failed: %v", err)
+		respondError(w, http.StatusInternalServerError, "Failed to get AI response")
+		return
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		respondError(w, http.StatusInternalServerError, "No response from AI")
+		return
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	if textPart, ok := part.(genai.Text); ok {
+		respondJSON(w, http.StatusOK, ChatResponse{Reply: string(textPart)})
+		return
+	}
+
 	respondError(w, http.StatusInternalServerError, "Unexpected AI response format")
 }

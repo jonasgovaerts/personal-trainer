@@ -39,6 +39,7 @@ func main() {
 	mux.HandleFunc("POST /api/nutrition/analyze", handlers.AnalyzeNutrition)
 	mux.HandleFunc("GET /api/nutrition/search", handlers.SearchFood)
 	mux.HandleFunc("GET /api/nutrition/barcode", handlers.GetFoodByBarcode)
+	mux.HandleFunc("POST /api/ai/chat", handlers.ChatWithAI)
 
 	// Serve static files (frontend) with SPA fallback
 	staticPath := "./static"
