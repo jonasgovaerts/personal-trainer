@@ -361,56 +361,68 @@ export default function Dashboard() {
           
         </div>
 
-        {/* AI Coach Chat Section - Mobile Floating & Desktop Fixed */}
+        {/* AI Coach Chat Section - Floating Widget */}
         <div className={cn(
-          "transition-all duration-300 z-[45]",
-          "lg:relative lg:block lg:translate-y-0 lg:opacity-100", // Desktop: Fixed section
+          "fixed transition-all duration-500 z-[60] ease-in-out",
           isChatOpen 
-            ? "fixed inset-x-4 bottom-24 top-20 opacity-100 translate-y-0" // Mobile Open
-            : "fixed bottom-24 right-4 w-14 h-14 rounded-full overflow-hidden translate-y-20 opacity-0 pointer-events-none" // Mobile Closed (hidden by FAB)
+            ? "bottom-24 right-4 left-4 top-20 lg:left-auto lg:top-auto lg:w-96 lg:h-[500px] opacity-100 translate-y-0 scale-100" 
+            : "bottom-24 right-6 w-12 h-12 opacity-0 translate-y-20 scale-95 pointer-events-none"
         )}>
-          <div className="bg-slate-900 border border-blue-500/20 rounded-2xl overflow-hidden shadow-2xl h-full flex flex-col">
-            <div className="bg-blue-600/10 p-4 border-b border-blue-500/20 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                      <Sparkles className="w-4 h-4 text-white" />
+          <div className="bg-slate-900 border border-blue-500/30 rounded-2xl overflow-hidden shadow-2xl h-full flex flex-col ring-1 ring-white/10">
+            <div className="bg-blue-600 p-4 flex items-center justify-between shadow-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
+                      <Sparkles className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                      <h3 className="text-sm font-bold text-white uppercase tracking-wider">AI Coach</h3>
+                      <h3 className="text-sm font-bold text-white uppercase tracking-widest">AI Coach</h3>
                       <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                        <span className="text-[10px] text-slate-400 font-medium">Online</span>
+                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                        <span className="text-[10px] text-blue-100 font-bold uppercase">Online</span>
                       </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setChatMessages([{ role: 'ai', text: "Chat cleared! How else can I help?" }])} className="text-slate-500 hover:text-slate-300 transition-colors p-1" title="Clear Chat">
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => {
+                      if (confirm("Clear your chat history?")) {
+                        setChatMessages([{ role: 'ai', text: "Chat cleared! How else can I help?" }]);
+                      }
+                    }} 
+                    className="text-white/70 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg" 
+                    title="Clear Chat"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setIsChatOpen(false)} className="lg:hidden text-slate-400 hover:text-white p-1">
+                  <button onClick={() => setIsChatOpen(false)} className="text-white/70 hover:text-white p-2 hover:bg-white/10 rounded-lg transition-colors">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/30 custom-scrollbar min-h-[150px]">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/40 custom-scrollbar">
                 {chatMessages.map((msg, idx) => (
-                  <div key={idx} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
+                  <div key={idx} className={cn("flex animate-in fade-in slide-in-from-bottom-2 duration-300", msg.role === 'user' ? "justify-end" : "justify-start")}>
                       <div className={cn(
-                        "max-w-[85%] p-3 rounded-2xl text-sm shadow-sm",
+                        "max-w-[85%] p-3.5 rounded-2xl text-sm shadow-md",
                         msg.role === 'user' 
                           ? "bg-blue-600 text-white rounded-tr-none" 
-                          : "bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700"
+                          : "bg-slate-800 text-slate-100 rounded-tl-none border border-slate-700/50"
                       )}>
                         {msg.text}
+                        {msg.file && (
+                          <div className="mt-2 pt-2 border-t border-white/10 flex items-center gap-2 text-[10px] font-bold opacity-80 uppercase">
+                             <FileText className="w-3 h-3" /> {msg.file}
+                          </div>
+                        )}
                       </div>
                   </div>
                 ))}
                 {isChatLoading && (
-                  <div className="flex justify-start">
-                      <div className="bg-slate-800 border border-slate-700 p-3 rounded-2xl rounded-tl-none flex items-center gap-2">
+                  <div className="flex justify-start animate-pulse">
+                      <div className="bg-slate-800 border border-slate-700/50 p-3 rounded-2xl rounded-tl-none flex items-center gap-3">
                         <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                        <span className="text-xs text-slate-400">Coach is thinking...</span>
+                        <span className="text-xs text-slate-400 font-medium">Coach is thinking...</span>
                       </div>
                   </div>
                 )}
@@ -418,12 +430,12 @@ export default function Dashboard() {
 
             <div className="p-4 bg-slate-900 border-t border-slate-800 shrink-0">
                 {selectedFile && (
-                  <div className="mb-2 p-2 bg-blue-600/10 border border-blue-500/20 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <FileText className="w-4 h-4 text-blue-500 shrink-0" />
-                      <span className="text-xs text-blue-400 truncate">{selectedFile.name}</span>
+                  <div className="mb-3 p-2 bg-blue-600/10 border border-blue-500/20 rounded-xl flex items-center justify-between animate-in slide-in-from-bottom-2">
+                    <div className="flex items-center gap-2 overflow-hidden px-1">
+                      <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span className="text-[10px] font-bold text-blue-400 truncate uppercase">{selectedFile.name}</span>
                     </div>
-                    <button onClick={() => setSelectedFile(null)} className="text-slate-500 hover:text-red-500 transition-colors">
+                    <button onClick={() => setSelectedFile(null)} className="text-slate-500 hover:text-red-500 transition-colors p-1">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -443,8 +455,8 @@ export default function Dashboard() {
                     type="button"
                     onClick={() => fileChatRef.current?.click()}
                     className={cn(
-                      "p-3 rounded-xl transition-all",
-                      selectedFile ? "bg-blue-600/20 text-blue-400" : "bg-slate-950 border border-slate-700 text-slate-500 hover:text-slate-300"
+                      "p-3 rounded-xl transition-all border",
+                      selectedFile ? "bg-blue-600/20 border-blue-500/40 text-blue-400" : "bg-slate-950 border-slate-700 text-slate-500 hover:text-slate-300"
                     )}
                   >
                     <Paperclip className="w-5 h-5" />
@@ -454,7 +466,7 @@ export default function Dashboard() {
                       value={chatInput}
                       onChange={e => setChatInput(e.target.value)}
                       placeholder="Ask or upload .gpx/.tcx..."
-                      className="flex-1 bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                      className="flex-1 bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"
                   />
                   <button 
                       type="submit"
@@ -468,13 +480,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Mobile FAB for AI Coach */}
+        {/* Global FAB for AI Coach */}
         {!isChatOpen && (
           <button 
             onClick={() => setIsChatOpen(true)}
-            className="lg:hidden fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-blue-600/40 animate-in zoom-in duration-300 z-40 border-4 border-slate-950"
+            className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-blue-600/40 hover:shadow-blue-500/60 hover:scale-110 hover:bg-blue-500 transition-all duration-300 z-50 border-4 border-slate-950 group"
           >
-            <Sparkles className="w-6 h-6" />
+            <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-950 animate-pulse" />
           </button>
         )}
 
