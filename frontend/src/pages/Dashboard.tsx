@@ -19,6 +19,23 @@ const volumeData = [
   { name: 'Sun', volume: 9490 },
 ];
 
+const renderMessageText = (text: string) => {
+  if (!text) return null;
+  const boldParts = text.split(/\*\*([^*]+)\*\*/g);
+  return boldParts.map((part, index) => {
+    if (index % 2 === 1) {
+      return <strong key={index} className="font-bold text-white">{part}</strong>;
+    }
+    const lineParts = part.split('\n');
+    return lineParts.map((line, lineIdx) => (
+      <span key={lineIdx}>
+        {lineIdx > 0 && <br />}
+        {line}
+      </span>
+    ));
+  });
+};
+
 export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -409,7 +426,7 @@ export default function Dashboard() {
                           ? "bg-blue-600 text-white rounded-tr-none" 
                           : "bg-slate-800 text-slate-100 rounded-tl-none border border-slate-700/50"
                       )}>
-                        {msg.text}
+                        {renderMessageText(msg.text)}
                         {msg.file && (
                           <div className="mt-2 pt-2 border-t border-white/10 flex items-center gap-2 text-[10px] font-bold opacity-80 uppercase">
                              <FileText className="w-3 h-3" /> {msg.file}
