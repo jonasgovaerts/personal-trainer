@@ -203,9 +203,9 @@ export default function Nutrition() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const consumed = logs.reduce((sum, item) => sum + item.calories, 0);
-  const consumedP = logs.reduce((sum, item) => sum + item.protein, 0);
-  const consumedC = logs.reduce((sum, item) => sum + item.carbs, 0);
-  const consumedF = logs.reduce((sum, item) => sum + item.fat, 0);
+  const consumedP = Number(logs.reduce((sum, item) => sum + item.protein, 0).toFixed(1));
+  const consumedC = Number(logs.reduce((sum, item) => sum + item.carbs, 0).toFixed(1));
+  const consumedF = Number(logs.reduce((sum, item) => sum + item.fat, 0).toFixed(1));
 
   const remaining = goal - consumed;
   const progressPercent = Math.min(100, Math.max(0, (consumed / goal) * 100));
@@ -683,7 +683,7 @@ export default function Nutrition() {
                     <div className="text-center lg:text-left">
                       <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
                         <span className="text-blue-500">Prot</span>
-                        <span className="text-slate-400">{consumedP}g</span>
+                        <span className="text-slate-400">{consumedP}g / {proteinGoal}g</span>
                       </div>
                       <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedP / proteinGoal) * 100)}%` }} />
@@ -692,7 +692,7 @@ export default function Nutrition() {
                     <div className="text-center lg:text-left">
                       <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
                         <span className="text-orange-500">Carbs</span>
-                        <span className="text-slate-400">{consumedC}g</span>
+                        <span className="text-slate-400">{consumedC}g / {carbsGoal}g</span>
                       </div>
                       <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full bg-orange-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedC / carbsGoal) * 100)}%` }} />
@@ -701,7 +701,7 @@ export default function Nutrition() {
                     <div className="text-center lg:text-left">
                       <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
                         <span className="text-emerald-500">Fat</span>
-                        <span className="text-slate-400">{consumedF}g</span>
+                        <span className="text-slate-400">{consumedF}g / {fatGoal}g</span>
                       </div>
                       <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedF / fatGoal) * 100)}%` }} />
