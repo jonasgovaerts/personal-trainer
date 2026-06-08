@@ -189,6 +189,17 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 		systemPrompt += fmt.Sprintf("The user has uploaded a fitness activity file named '%s'. ", fileName)
 		systemPrompt += "Analyze this file (it might be GPX, TCX, XML, or binary .FIT data). "
 		systemPrompt += "Extract the activity type, duration, and specifically the ESTIMATED CALORIES BURNED. "
+		
+		// Try parsing .fit files natively first
+		if strings.HasSuffix(strings.ToLower(fileName), ".fit") {
+			if cal, act, dur, err := ParseFitFile(fileBytes); err == nil {
+				// Force Gemini to use these exact values!
+				systemPrompt += fmt.Sprintf("AUTHENTIC STATS extracted from the binary: The activity is actually '%s', with a duration of %d minutes, and the EXACT device-calculated calories burned is %d kcal. You MUST use these exact parsed values (%d kcal for calories, '%s' for name) in your response and in the [WORKOUT_DATA] block. Do NOT estimate different values. ", act, dur, cal, cal, act)
+			} else {
+				log.Printf("WARN: Native FIT parsing failed: %v. Falling back to AI estimation.", err)
+			}
+		}
+
 		systemPrompt += "Return your response in two parts: 1. A friendly encouraging message about the workout. "
 		systemPrompt += "2. A JSON-like block at the end (but still within your text response) in the format: [WORKOUT_DATA:{\"calories\": 450, \"name\": \"Morning Run\"}]. "
 		
