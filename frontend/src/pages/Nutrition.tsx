@@ -679,29 +679,29 @@ export default function Nutrition() {
                   </div>
 
                   {/* Macros Section */}
-                  <div className="mt-8 w-full grid grid-cols-3 lg:grid-cols-1 gap-4 lg:space-y-4 px-1 lg:px-2">
+                  <div className="mt-8 w-full grid grid-cols-3 lg:grid-cols-1 gap-2 lg:gap-4 px-1 lg:px-2">
                     <div className="text-center lg:text-left">
-                      <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
+                      <div className="flex flex-col lg:flex-row lg:justify-between text-[9px] lg:text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
                         <span className="text-blue-500">Prot</span>
-                        <span className="text-slate-400">{consumedP}g / {proteinGoal}g</span>
+                        <span className="text-slate-400 whitespace-nowrap">{consumedP}g / {proteinGoal}g</span>
                       </div>
                       <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedP / proteinGoal) * 100)}%` }} />
                       </div>
                     </div>
                     <div className="text-center lg:text-left">
-                      <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
+                      <div className="flex flex-col lg:flex-row lg:justify-between text-[9px] lg:text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
                         <span className="text-orange-500">Carbs</span>
-                        <span className="text-slate-400">{consumedC}g / {carbsGoal}g</span>
+                        <span className="text-slate-400 whitespace-nowrap">{consumedC}g / {carbsGoal}g</span>
                       </div>
                       <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full bg-orange-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedC / carbsGoal) * 100)}%` }} />
                       </div>
                     </div>
                     <div className="text-center lg:text-left">
-                      <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
+                      <div className="flex flex-col lg:flex-row lg:justify-between text-[9px] lg:text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
                         <span className="text-emerald-500">Fat</span>
-                        <span className="text-slate-400">{consumedF}g / {fatGoal}g</span>
+                        <span className="text-slate-400 whitespace-nowrap">{consumedF}g / {fatGoal}g</span>
                       </div>
                       <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedF / fatGoal) * 100)}%` }} />
