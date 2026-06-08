@@ -84,39 +84,39 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Chat failed');
       const data = await res.json();
       setChatMessages(prev => [...prev, { role: 'ai', text: data.reply }]);
-      
+
       // If AI found burned calories, refresh history and user to update the overview
       if (data.burned_calories) {
         toast(`Logged ${data.burned_calories} kcal from ${data.activity_name || 'workout'}!`, 'success');
-        
+
         // Refresh history
-        fetch('/api/workouts/history?user_id=1')
+        fetch(`/api/workouts/history?user_id=1&_t=${Date.now()}`, { cache: 'no-store' })
           .then(res => res.json())
           .then(workoutsData => setHistory(Array.isArray(workoutsData) ? workoutsData : []));
       }
-    } catch (err) {
+      } catch (err) {
       console.error(err);
       toast('Failed to get coach response', 'error');
-    } finally {
+      } finally {
       setIsChatLoading(false);
-    }
-  };
+      }
+      };
 
-  const goal = user?.goal_calories || 2500;
-  const proteinGoal = user?.goal_protein || 150;
-  const carbsGoal = user?.goal_carbs || 250;
-  const fatGoal = user?.goal_fat || 80;
+      const goal = user?.goal_calories || 2500;
+      const proteinGoal = user?.goal_protein || 150;
+      const carbsGoal = user?.goal_carbs || 250;
+      const fatGoal = user?.goal_fat || 80;
 
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/workouts/history?user_id=1').then(res => res.json()),
-      fetch('/api/nutrition?user_id=1').then(res => res.json())
-    ])
-    .then(([workoutsData, nutritionData]) => {
+      useEffect(() => {
+      Promise.all([
+      fetch(`/api/workouts/history?user_id=1&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()),
+      fetch(`/api/nutrition?user_id=1&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json())
+      ])
+      .then(([workoutsData, nutritionData]) => {
       setHistory(Array.isArray(workoutsData) ? workoutsData : []);
       setNutritionLogs(Array.isArray(nutritionData) ? nutritionData : []);
       setLoading(false);
-    })
+      })
     .catch(err => {
       console.error("Failed to fetch dashboard data:", err);
       setLoading(false);
