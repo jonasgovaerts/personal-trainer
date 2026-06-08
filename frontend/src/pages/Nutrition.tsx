@@ -25,6 +25,7 @@ interface LogItem {
   type: 'food' | 'drink';
   meal: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   timestamp: Date;
+  portionGrams?: number;
 }
 
 interface StagedItem {
@@ -40,6 +41,57 @@ interface StagedItem {
   image?: string;
 }
 
+interface SuggestionItem {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  type: 'food' | 'drink';
+  brand?: string;
+}
+
+const MEAL_SUGGESTIONS: Record<'breakfast' | 'lunch' | 'dinner' | 'snack', SuggestionItem[]> = {
+  breakfast: [
+    { name: 'Oatmeal with Honey & Milk', calories: 120, protein: 4.2, carbs: 21, fat: 2.5, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Scrambled Eggs (2 large)', calories: 143, protein: 12.6, carbs: 0.8, fat: 9.5, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Whole Wheat Toast (2 slices)', calories: 240, protein: 9.0, carbs: 46.0, fat: 2.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Greek Yogurt (Plain, Low Fat)', calories: 73, protein: 10.0, carbs: 3.6, fat: 2.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Banana (1 medium)', calories: 89, protein: 1.1, carbs: 22.8, fat: 0.3, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Whey Protein Shake (1 scoop)', calories: 120, protein: 24.0, carbs: 3.0, fat: 1.5, type: 'drink', brand: 'Popular Suggestion' }
+  ],
+  lunch: [
+    { name: 'Grilled Chicken Breast', calories: 165, protein: 31.0, carbs: 0.0, fat: 3.6, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'White Rice (Cooked)', calories: 130, protein: 2.7, carbs: 28.0, fat: 0.3, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Turkey & Cheese Sandwich', calories: 320, protein: 18.0, carbs: 34.0, fat: 12.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Mixed Greens Salad (with Olive Oil)', calories: 110, protein: 1.0, carbs: 4.0, fat: 10.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Canned Tuna (in water)', calories: 116, protein: 26.0, carbs: 0.0, fat: 1.0, type: 'food', brand: 'Popular Suggestion' }
+  ],
+  dinner: [
+    { name: 'Baked Salmon Fillet', calories: 206, protein: 22.0, carbs: 0.0, fat: 12.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Steamed Broccoli', calories: 34, protein: 2.8, carbs: 7.0, fat: 0.4, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Beef Sirloin Steak', calories: 244, protein: 24.0, carbs: 0.0, fat: 16.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Baked Sweet Potato', calories: 86, protein: 1.6, carbs: 20.0, fat: 0.1, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Brown Rice (Cooked)', calories: 111, protein: 2.6, carbs: 23.0, fat: 0.9, type: 'food', brand: 'Popular Suggestion' }
+  ],
+  snack: [
+    { name: 'Almonds (Handful, 28g)', calories: 580, protein: 21.0, carbs: 22.0, fat: 49.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Apple (with 1 tbsp Peanut Butter)', calories: 190, protein: 4.5, carbs: 25.0, fat: 8.5, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Rice Cakes (2 plain)', calories: 70, protein: 1.5, carbs: 15.0, fat: 0.6, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Dark Chocolate (70% Cocoa, 30g)', calories: 170, protein: 2.0, carbs: 13.0, fat: 12.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Cottage Cheese (Low Fat)', calories: 82, protein: 11.0, carbs: 3.4, fat: 2.3, type: 'food', brand: 'Popular Suggestion' }
+  ]
+};
+
+const getDefaultMealForTime = (): 'breakfast' | 'lunch' | 'dinner' | 'snack' => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 11) return 'breakfast';
+  if (hour >= 11 && hour < 16) return 'lunch';
+  if (hour >= 16 && hour < 18) return 'snack';
+  if (hour >= 18 && hour < 22) return 'dinner';
+  return 'snack';
+};
+
 export default function Nutrition() {
   const { t } = useTranslation();
   const { toast, confirm } = useUI();
@@ -53,7 +105,7 @@ export default function Nutrition() {
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [historyLogs, setHistoryLogs] = useState<LogItem[]>([]);
   const [activeTab, setActiveTab] = useState<'manual' | 'ai' | 'barcode' | 'search'>('search');
-  const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
+  const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(getDefaultMealForTime());
   const [viewMode, setViewMode] = useState<'today' | 'month'>('today');
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -85,7 +137,8 @@ export default function Nutrition() {
             fat: item.fat || 0,
             type: item.type as 'food' | 'drink',
             meal: item.meal as 'breakfast' | 'lunch' | 'dinner' | 'snack',
-            timestamp: new Date(item.timestamp)
+            timestamp: new Date(item.timestamp),
+            portionGrams: item.portion_grams
           }));
           setLogs(formattedData);
         }
@@ -108,7 +161,8 @@ export default function Nutrition() {
             fat: item.fat || 0,
             type: item.type as 'food' | 'drink',
             meal: item.meal as 'breakfast' | 'lunch' | 'dinner' | 'snack',
-            timestamp: new Date(item.timestamp)
+            timestamp: new Date(item.timestamp),
+            portionGrams: item.portion_grams
           }));
           setHistoryLogs(formattedData);
         }
@@ -155,6 +209,43 @@ export default function Nutrition() {
 
   const remaining = goal - consumed;
   const progressPercent = Math.min(100, Math.max(0, (consumed / goal) * 100));
+
+  // Hydration variables
+  const loggedWater = logs
+    .filter(l => l.name.toLowerCase().trim() === 'water' && l.type === 'drink')
+    .reduce((sum, l) => sum + (l.portionGrams || 100), 0);
+  const waterTarget = 2000;
+  const waterProgress = Math.min(100, (loggedWater / waterTarget) * 100);
+
+  const logWater = (amount: number) => {
+    addLog('Water', 0, 0, 0, 0, 'drink', undefined, amount);
+  };
+
+  // Personalized Suggestions based on past history (excluding water)
+  const personalizedSuggestions = (): SuggestionItem[] => {
+    const mealLogs = historyLogs.filter(log => log.meal === selectedMeal && log.name.toLowerCase().trim() !== 'water');
+    const counts: Record<string, { count: number; log: LogItem }> = {};
+    mealLogs.forEach(log => {
+      const key = log.name.toLowerCase().trim();
+      if (!counts[key]) {
+        counts[key] = { count: 0, log };
+      }
+      counts[key].count += 1;
+    });
+
+    return Object.values(counts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+      .map(item => ({
+        name: item.log.name,
+        calories: item.log.calories,
+        protein: item.log.protein,
+        carbs: item.log.carbs,
+        fat: item.log.fat,
+        type: item.log.type,
+        brand: 'Frequently Logged'
+      }));
+  };
 
   // --- Barcode Scanner Logic ---
   useEffect(() => {
@@ -262,7 +353,8 @@ export default function Nutrition() {
         fat: savedItem.fat || 0,
         type: itemType(type),
         meal: itemMeal(selectedMeal),
-        timestamp: new Date(savedItem.timestamp)
+        timestamp: new Date(savedItem.timestamp),
+        portionGrams: savedItem.portion_grams
       };
       
       setLogs([newItem, ...logs]);
@@ -550,69 +642,101 @@ export default function Nutrition() {
           <>
             {/* Dashboard Top */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Circular Progress */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center relative">
-                <div className="relative w-32 h-32 lg:w-40 lg:h-40 flex items-center justify-center">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" className="text-slate-800 stroke-current" strokeWidth="8" fill="transparent" />
-                    <circle cx="50" cy="50" r="40" className={cn("stroke-current transition-all duration-1000", remaining < 0 ? "text-red-500" : "text-emerald-500")} strokeWidth="8" fill="transparent" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * progressPercent) / 100} />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl lg:text-3xl font-bold text-white">{consumed}</span>
-                    <span className="text-[10px] lg:text-xs font-semibold text-slate-500 uppercase tracking-wider">KCAL</span>
+              <div className="space-y-6">
+                {/* Circular Progress */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center relative">
+                  <div className="relative w-32 h-32 lg:w-40 lg:h-40 flex items-center justify-center">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="40" className="text-slate-800 stroke-current" strokeWidth="8" fill="transparent" />
+                      <circle cx="50" cy="50" r="40" className={cn("stroke-current transition-all duration-1000", remaining < 0 ? "text-red-500" : "text-emerald-500")} strokeWidth="8" fill="transparent" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * progressPercent) / 100} />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl lg:text-3xl font-bold text-white">{consumed}</span>
+                      <span className="text-[10px] lg:text-xs font-semibold text-slate-500 uppercase tracking-wider">KCAL</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 w-full flex justify-between text-center px-2 lg:px-4">
+                    <div>
+                      <p className="text-[10px] lg:text-xs font-semibold text-slate-500 uppercase">{t('nutrition.goal')}</p>
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <Target className="w-3 h-3 text-blue-500" />
+                        <input 
+                          type="number" 
+                          inputMode="numeric"
+                          value={goal}
+                          onChange={(e) => setGoal(parseInt(e.target.value) || 0)}
+                          className="w-12 lg:w-16 bg-transparent text-white font-bold text-base lg:text-lg text-center focus:outline-none border-b border-dashed border-slate-600 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] lg:text-xs font-semibold text-slate-500 uppercase">{t('nutrition.remaining')}</p>
+                      <p className={cn("font-bold text-base lg:text-lg mt-1", remaining < 0 ? "text-red-500" : "text-emerald-500")}>
+                        {Math.abs(remaining)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Macros Section */}
+                  <div className="mt-8 w-full grid grid-cols-3 lg:grid-cols-1 gap-4 lg:space-y-4 px-1 lg:px-2">
+                    <div className="text-center lg:text-left">
+                      <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
+                        <span className="text-blue-500">Prot</span>
+                        <span className="text-slate-400">{consumedP}g</span>
+                      </div>
+                      <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedP / proteinGoal) * 100)}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-center lg:text-left">
+                      <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
+                        <span className="text-orange-500">Carbs</span>
+                        <span className="text-slate-400">{consumedC}g</span>
+                      </div>
+                      <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedC / carbsGoal) * 100)}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-center lg:text-left">
+                      <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
+                        <span className="text-emerald-500">Fat</span>
+                        <span className="text-slate-400">{consumedF}g</span>
+                      </div>
+                      <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedF / fatGoal) * 100)}%` }} />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-6 w-full flex justify-between text-center px-2 lg:px-4">
-                  <div>
-                    <p className="text-[10px] lg:text-xs font-semibold text-slate-500 uppercase">{t('nutrition.goal')}</p>
-                    <div className="flex items-center justify-center gap-1 mt-1">
-                      <Target className="w-3 h-3 text-blue-500" />
-                      <input 
-                        type="number" 
-                        inputMode="numeric"
-                        value={goal}
-                        onChange={(e) => setGoal(parseInt(e.target.value) || 0)}
-                        className="w-12 lg:w-16 bg-transparent text-white font-bold text-base lg:text-lg text-center focus:outline-none border-b border-dashed border-slate-600 focus:border-blue-500"
-                      />
+                {/* Hydration Tracker */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <CupSoda className="w-5 h-5 text-blue-500" />
+                      <h3 className="font-semibold text-base text-white">Hydration</h3>
                     </div>
+                    <span className="text-xs font-bold text-blue-400">{loggedWater} / {waterTarget} ml</span>
                   </div>
-                  <div>
-                    <p className="text-[10px] lg:text-xs font-semibold text-slate-500 uppercase">{t('nutrition.remaining')}</p>
-                    <p className={cn("font-bold text-base lg:text-lg mt-1", remaining < 0 ? "text-red-500" : "text-emerald-500")}>
-                      {Math.abs(remaining)}
-                    </p>
-                  </div>
-                </div>
 
-                {/* Macros Section */}
-                <div className="mt-8 w-full grid grid-cols-3 lg:grid-cols-1 gap-4 lg:space-y-4 px-1 lg:px-2">
-                  <div className="text-center lg:text-left">
-                    <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
-                      <span className="text-blue-500">Prot</span>
-                      <span className="text-slate-400">{consumedP}g</span>
-                    </div>
-                    <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedP / proteinGoal) * 100)}%` }} />
-                    </div>
+                  <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden mb-6 relative">
+                    <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${waterProgress}%` }} />
                   </div>
-                  <div className="text-center lg:text-left">
-                    <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
-                      <span className="text-orange-500">Carbs</span>
-                      <span className="text-slate-400">{consumedC}g</span>
-                    </div>
-                    <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-orange-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedC / carbsGoal) * 100)}%` }} />
-                    </div>
-                  </div>
-                  <div className="text-center lg:text-left">
-                    <div className="flex flex-col lg:flex-row lg:justify-between text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
-                      <span className="text-emerald-500">Fat</span>
-                      <span className="text-slate-400">{consumedF}g</span>
-                    </div>
-                    <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedF / fatGoal) * 100)}%` }} />
-                    </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => logWater(250)}
+                      className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-blue-500" /> +250ml Glass
+                    </button>
+                    <button
+                      onClick={() => logWater(500)}
+                      className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-blue-500" /> +500ml Bottle
+                    </button>
                   </div>
                 </div>
               </div>
@@ -691,7 +815,65 @@ export default function Nutrition() {
                         {isSearching ? (
                           <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
                         ) : !hasSearched ? (
-                          <p className="text-center text-slate-500 py-8 text-sm italic">Lookup foods based on name...</p>
+                          <div className="space-y-4 pt-2">
+                            {/* Personalized Suggestions Row */}
+                            {personalizedSuggestions().length > 0 && (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-400">
+                                  <Activity className="w-4 h-4" />
+                                  <span>Frequently Logged</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-2">
+                                  {personalizedSuggestions().map((item, idx) => (
+                                    <div key={`fav-${idx}`} className="bg-blue-950/25 border border-blue-900/30 rounded-xl p-3 flex items-center justify-between group hover:border-blue-800 transition-colors">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                                          {item.type === 'drink' ? <CupSoda className="w-5 h-5 text-blue-500" /> : <Apple className="w-5 h-5 text-blue-400" />}
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="text-sm font-bold text-white truncate">{item.name}</p>
+                                          <p className="text-[10px] text-slate-500 uppercase font-bold">
+                                            {Math.round(item.calories)} kcal / 100{item.type === 'drink' ? 'ml' : 'g'} • P:{item.protein}g C:{item.carbs}g F:{item.fat}g
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <button onClick={() => triggerVerification(item)} className="bg-blue-900/50 hover:bg-blue-600 p-2 rounded-lg text-blue-400 hover:text-white transition-all ml-4 shrink-0">
+                                        <Plus className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Popular Suggestions Row */}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                                <Sparkles className="w-4 h-4 text-amber-500" />
+                                <span>Suggested for {t(`nutrition.meal.${selectedMeal}`)}</span>
+                              </div>
+                              <div className="grid grid-cols-1 gap-2">
+                                {MEAL_SUGGESTIONS[selectedMeal]?.map((item, idx) => (
+                                  <div key={idx} className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 flex items-center justify-between group hover:border-slate-700 transition-colors">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-10 h-10 rounded-lg bg-slate-800/80 flex items-center justify-center shrink-0">
+                                        {item.type === 'drink' ? <CupSoda className="w-5 h-5 text-blue-500" /> : <Apple className="w-5 h-5 text-emerald-500" />}
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-bold text-white truncate">{item.name}</p>
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold">
+                                          {Math.round(item.calories)} kcal / 100{item.type === 'drink' ? 'ml' : 'g'} • P:{item.protein}g C:{item.carbs}g F:{item.fat}g
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <button onClick={() => triggerVerification(item)} className="bg-slate-800 p-2 rounded-lg text-blue-500 hover:bg-blue-600 hover:text-white transition-all ml-4 shrink-0">
+                                      <Plus className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
                         ) : searchResults.length === 0 ? (
                           <p className="text-center text-slate-500 py-8 text-sm italic">No items found. Try a different name.</p>
                         ) : (

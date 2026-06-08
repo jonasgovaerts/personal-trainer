@@ -60,6 +60,23 @@ func LogNutrition(w http.ResponseWriter, r *http.Request) {
 		req.Timestamp = time.Now()
 	}
 
+	// Smart prediction of meal based on timestamp if not set or invalid
+	req.Meal = strings.ToLower(strings.TrimSpace(req.Meal))
+	if req.Meal != "breakfast" && req.Meal != "lunch" && req.Meal != "dinner" && req.Meal != "snack" {
+		hour := req.Timestamp.Hour()
+		if hour >= 5 && hour < 11 {
+			req.Meal = "breakfast"
+		} else if hour >= 11 && hour < 16 {
+			req.Meal = "lunch"
+		} else if hour >= 16 && hour < 18 {
+			req.Meal = "snack"
+		} else if hour >= 18 && hour < 22 {
+			req.Meal = "dinner"
+		} else {
+			req.Meal = "snack"
+		}
+	}
+
 	if err := db.DB.Create(&req).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to log nutrition")
 		return
