@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, Activity, Dumbbell, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { CalendarDays, Activity, Dumbbell, ChevronDown, ChevronUp, Trash2, UploadCloud, Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import Layout from '../components/Layout';
 import { useUI } from '../contexts/UIContext';
@@ -21,6 +21,7 @@ interface Workout {
   date: string;
   notes: string;
   Logs: WorkoutLog[];
+  calories_burned?: number;
 }
 
 export default function History() {
@@ -29,6 +30,9 @@ export default function History() {
   const [history, setHistory] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchHistory = () => {
     setLoading(true);
@@ -65,6 +69,41 @@ export default function History() {
     }
   };
 
+  const handleFitUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('message', 'Please analyze this .FIT fitness file and extract the activity name and estimated calories burned.');
+
+    setIsUploading(true);
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        body: formData
+      });
+      if (!res.ok) throw new Error('Failed to import FIT file');
+      const data = await res.json();
+      
+      if (data.burned_calories) {
+        toast(`Successfully imported Strava Workout: ${data.activity_name || 'Workout'} (${data.burned_calories} kcal)!`, 'success');
+        fetchHistory();
+      } else {
+        toast('Imported activity successfully, but no calories were specified.', 'info');
+        fetchHistory();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast('Failed to upload and parse Strava FIT file.', 'error');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const toggleExpand = (id: number) => {
     setExpandedId(expandedId === id ? null : id);
   };
@@ -92,10 +131,31 @@ export default function History() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex items-end justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white">{t('history.title')}</h1>
             <p className="text-slate-400 mt-1">{t('history.subtitle')}</p>
+          </div>
+          <div className="shrink-0">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs lg:text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
+            >
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <UploadCloud className="w-4 h-4 text-white" />
+              )}
+              {isUploading ? 'Importing...' : 'Import .FIT from Strava'}
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFitUpload}
+              accept=".fit"
+              className="hidden"
+            />
           </div>
         </div>
 
@@ -139,8 +199,17 @@ export default function History() {
                         <h3 className="text-base lg:text-lg font-bold text-white leading-tight truncate">
                           {workout.notes || t('dashboard.recent.routine')}
                         </h3>
-                        <p className="text-[10px] lg:text-xs text-slate-500 mt-1">
-                          {totalSets} {t('history.setsCompleted')} • {groupedLogs.length} {t('history.exercises')}
+                        <p className="text-[10px] lg:text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1.5">
+                          {workout.calories_burned && workout.calories_burned > 0 ? (
+                            <span className="text-orange-400 font-bold bg-orange-500/10 px-1.5 py-0.5 rounded flex items-center gap-0.5 mr-1 shrink-0">🔥 {workout.calories_burned} kcal</span>
+                          ) : null}
+                          <span>
+                            {totalSets > 0 ? (
+                              `${totalSets} ${t('history.setsCompleted')} • ${groupedLogs.length} ${t('history.exercises')}`
+                            ) : (
+                              'Cardio Activity'
+                            )}
+                          </span>
                         </p>
                       </div>
                       <div className="flex items-center gap-2 lg:gap-3 shrink-0 ml-2">

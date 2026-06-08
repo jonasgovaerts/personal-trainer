@@ -185,13 +185,21 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 		fileName := header.Filename
 		
 		systemPrompt += fmt.Sprintf("The user has uploaded a fitness activity file named '%s'. ", fileName)
-		systemPrompt += "Analyze this file (it might be GPX, TCX, or similar XML-based fitness data). "
+		systemPrompt += "Analyze this file (it might be GPX, TCX, XML, or binary .FIT data). "
 		systemPrompt += "Extract the activity type, duration, and specifically the ESTIMATED CALORIES BURNED. "
 		systemPrompt += "Return your response in two parts: 1. A friendly encouraging message about the workout. "
 		systemPrompt += "2. A JSON-like block at the end (but still within your text response) in the format: [WORKOUT_DATA:{\"calories\": 450, \"name\": \"Morning Run\"}]. "
 		
 		prompt = append(prompt, genai.Text(systemPrompt))
-		prompt = append(prompt, genai.Text("File Content: "+string(fileBytes)))
+		
+		if strings.HasSuffix(strings.ToLower(fileName), ".fit") {
+			prompt = append(prompt, genai.Blob{
+				MIMEType: "application/octet-stream",
+				Data:     fileBytes,
+			})
+		} else {
+			prompt = append(prompt, genai.Text("File Content: "+string(fileBytes)))
+		}
 	} else {
 		systemPrompt += "Answer the following question briefly and encouragingly: "
 		prompt = append(prompt, genai.Text(systemPrompt))
