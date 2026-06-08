@@ -142,6 +142,40 @@ const predefinedPlans = [
       { name: 'Glute Bridges', sets: 3, reps: 20, weight: 0 },
       { name: 'Leg Raises', sets: 3, reps: 15, weight: 0 }
     ]
+  },
+  {
+    id: 'plan-9',
+    category: 'Full Body',
+    name: 'Heavy Duty Iron',
+    duration: '60 min',
+    intensity: 'High',
+    exerciseCount: 6,
+    description: 'A heavy-hitting full body routine utilizing barbell and dumbbells to build maximal strength and ice-bound armor.',
+    exercises: [
+      { name: 'Barbell Deadlift', sets: 4, reps: 6, weight: 60 },
+      { name: 'Dumbbell Bench Press', sets: 4, reps: 8, weight: 22 },
+      { name: 'Barbell Bent Over Row', sets: 3, reps: 10, weight: 40 },
+      { name: 'Barbell Back Squat', sets: 3, reps: 8, weight: 50 },
+      { name: 'Overhead Press', sets: 3, reps: 10, weight: 35 },
+      { name: 'Deadbugs', sets: 3, reps: 12, weight: 0 }
+    ]
+  },
+  {
+    id: 'plan-10',
+    category: 'Full Body',
+    name: 'Kettlebell & Dumbbell Power',
+    duration: '45 min',
+    intensity: 'High',
+    exerciseCount: 6,
+    description: 'An explosive full body circuit combining kettlebell power and dumbbells for unmatched endurance and functional conditioning.',
+    exercises: [
+      { name: 'Kettlebell Swings', sets: 4, reps: 15, weight: 16 },
+      { name: 'Dumbbell Rows', sets: 3, reps: 10, weight: 18 },
+      { name: 'Kettlebell Clean & Press', sets: 3, reps: 8, weight: 12 },
+      { name: 'Bulgarian Split Squats', sets: 3, reps: 10, weight: 14 },
+      { name: 'Push-ups', sets: 3, reps: 15, weight: 0 },
+      { name: 'Russian Twists', sets: 3, reps: 20, weight: 10 }
+    ]
   }
 ];
 

@@ -59,16 +59,9 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// SeedDatabase populates the DB with initial equipment and exercises if empty.
+// SeedDatabase populates the DB with initial equipment and exercises and performs updates.
 func SeedDatabase(db *gorm.DB) {
-	var count int64
-	db.Model(&models.Equipment{}).Count(&count)
-	if count > 0 {
-		log.Println("INFO: Database already seeded. Skipping.")
-		return
-	}
-
-	log.Println("INFO: Seeding database...")
+	log.Println("INFO: Seeding/updating database...")
 
 	// 1. Seed Equipment
 	equipmentList := []models.Equipment{
@@ -81,7 +74,13 @@ func SeedDatabase(db *gorm.DB) {
 		{Name: "Fitnessbal (Swiss Ball)"},
 		{Name: "Medicijnbal"},
 	}
-	db.Create(&equipmentList)
+
+	for _, eq := range equipmentList {
+		var existing models.Equipment
+		if err := db.Where("name = ?", eq.Name).First(&existing).Error; err != nil {
+			db.Create(&eq)
+		}
+	}
 
 	// Helper to find equipment by name
 	getEq := func(name string) models.Equipment {
@@ -93,8 +92,10 @@ func SeedDatabase(db *gorm.DB) {
 	bw := getEq("Lichaamsgewicht")
 	dbell := getEq("Halters (Dumbbells)")
 	kbell := getEq("Kettlebells")
+	bbell := getEq("Halterstang (Barbell)")
 	mball := getEq("Medicijnbal")
 	bands := getEq("Weerstandsbanden")
+	optrek := getEq("Optrekstang")
 
 	// 2. Seed Exercises
 	exercises := []models.Exercise{
@@ -160,7 +161,7 @@ func SeedDatabase(db *gorm.DB) {
 			HockeyBenefit: "Kracht in hamstrings en bilspieren, balans voor fasen waarbij je op één schaats staat.",
 			VideoURL:      "https://www.youtube.com/watch?v=Gk74iYpI9S0",
 			ImageURL:      "https://images.unsplash.com/photo-1526506114842-835ec7fb3d2f?auto=format&fit=crop&q=80&w=400&h=400",
-			Equipment:     []models.Equipment{bw, dbell, kbell},
+			Equipment:     []models.Equipment{bw, dbell, kbell, bbell},
 		},
 		{
 			Name:          "Glute Bridges",
@@ -184,7 +185,7 @@ func SeedDatabase(db *gorm.DB) {
 			HockeyBenefit: "Bovenrug- en grijpkracht, belangrijk voor puckbescherming en het winnen van fysieke duels.",
 			VideoURL:      "https://www.youtube.com/watch?v=eGo4IYtlcy3",
 			ImageURL:      "https://images.unsplash.com/photo-1540206276207-3af25c08abbb?auto=format&fit=crop&q=80&w=400&h=400",
-			Equipment:     []models.Equipment{getEq("Optrekstang")},
+			Equipment:     []models.Equipment{optrek},
 		},
 		{
 			Name:          "Dumbbell Rows",
@@ -208,7 +209,7 @@ func SeedDatabase(db *gorm.DB) {
 			HockeyBenefit: "Unilaterale beenkracht en balans, belangrijk voor stabiliteit op het ijs.",
 			VideoURL:      "https://www.youtube.com/watch?v=QOVaHwm-Q6U",
 			ImageURL:      "https://images.unsplash.com/photo-1574680178050-55c6f6997ea6?auto=format&fit=crop&q=80&w=400&h=400",
-			Equipment:     []models.Equipment{bw, dbell},
+			Equipment:     []models.Equipment{bw, dbell, kbell, bbell},
 		},
 		{
 			Name:          "Bicep Curls",
@@ -216,7 +217,7 @@ func SeedDatabase(db *gorm.DB) {
 			HockeyBenefit: "Armkracht, nuttig voor het vasthouden van je stick en face-offs.",
 			VideoURL:      "https://www.youtube.com/watch?v=in7PaeYlhrM",
 			ImageURL:      "https://images.unsplash.com/photo-1583454110551-21f2fa2adfcd?auto=format&fit=crop&q=80&w=400&h=400",
-			Equipment:     []models.Equipment{dbell, bands},
+			Equipment:     []models.Equipment{dbell, bands, kbell, bbell},
 		},
 		{
 			Name:          "Deadbugs",
@@ -240,7 +241,7 @@ func SeedDatabase(db *gorm.DB) {
 			HockeyBenefit: "Schouderkracht en stabiliteit, belangrijk voor fysieke gevechten langs de boarding.",
 			VideoURL:      "https://www.youtube.com/watch?v=B-aVuyhvLHU",
 			ImageURL:      "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&q=80&w=400&h=400",
-			Equipment:     []models.Equipment{dbell, kbell},
+			Equipment:     []models.Equipment{dbell, kbell, bbell},
 		},
 		{
 			Name:          "Jump Squats",
@@ -256,7 +257,7 @@ func SeedDatabase(db *gorm.DB) {
 			HockeyBenefit: "Kuitkracht, helpt bij de laatste fase van de afzet tijdens het schaatsen.",
 			VideoURL:      "https://www.youtube.com/watch?v=gwLzBJYoWlI",
 			ImageURL:      "https://images.unsplash.com/photo-1594381898411-846e7d193883?auto=format&fit=crop&q=80&w=400&h=400",
-			Equipment:     []models.Equipment{bw, dbell},
+			Equipment:     []models.Equipment{bw, dbell, kbell, bbell},
 		},
 		{
 			Name:          "Tricep Dips",
@@ -282,8 +283,70 @@ func SeedDatabase(db *gorm.DB) {
 			ImageURL:      "https://images.unsplash.com/photo-1548690312-e3b507d17a47?auto=format&fit=crop&q=80&w=400&h=400",
 			Equipment:     []models.Equipment{bw},
 		},
+		// New exercises: Barbell, Dumbbell, Kettlebell
+		{
+			Name:          "Barbell Back Squat",
+			Description:   "Plaats de halterstang op je bovenrug. Zet je voeten op schouderbreedte. Zak gecontroleerd door je knieën alsof je op een stoel gaat zitten, houd je rug recht en duw jezelf weer omhoog.",
+			HockeyBenefit: "Fundamentele kracht in de benen en heupen voor krachtige schaatsafzetten.",
+			VideoURL:      "https://www.youtube.com/watch?v=gcNh17CisGY",
+			ImageURL:      "https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&q=80&w=400&h=400",
+			Equipment:     []models.Equipment{bbell},
+		},
+		{
+			Name:          "Kettlebell Swings",
+			Description:   "Sta met je voeten iets breder dan schouderbreedte. Buig vanuit de heupen, pak de kettlebell en zwaai deze krachtig naar voren tot ooghoogte door je heupen explosief te strekken.",
+			HockeyBenefit: "Explosieve heupkracht en uithoudingsvermogen, essentieel voor snelle starts en sprints.",
+			VideoURL:      "https://www.youtube.com/watch?v=sSESeQ5PyxM",
+			ImageURL:      "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=400&h=400",
+			Equipment:     []models.Equipment{kbell},
+		},
+		{
+			Name:          "Barbell Deadlift",
+			Description:   "Sta met je voeten op heupbreedte onder de stang. Buig door je knieën en heupen, pak de stang vast en til deze met een rechte rug omhoog door je heupen en knieën te strekken.",
+			HockeyBenefit: "Totale achterste keten kracht en core-stabiliteit om stevig op het ijs te staan en fysieke duels te domineren.",
+			VideoURL:      "https://www.youtube.com/watch?v=r4MzxtBKyNE",
+			ImageURL:      "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=400&h=400",
+			Equipment:     []models.Equipment{bbell},
+		},
+		{
+			Name:          "Dumbbell Bench Press",
+			Description:   "Lig plat op je rug op een bankje. Houd een dumbbell in elke hand op borsthoogte en duw ze recht omhoog tot je armen volledig gestrekt zijn. Laat ze gecontroleerd zakken.",
+			HockeyBenefit: "Bovenlichaam duwkracht voor het afhouden van tegenstanders en stabiliteit in duels.",
+			VideoURL:      "https://www.youtube.com/watch?v=8iP6Xn612WY",
+			ImageURL:      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=400&h=400",
+			Equipment:     []models.Equipment{dbell},
+		},
+		{
+			Name:          "Barbell Bent Over Row",
+			Description:   "Buig voorover met een rechte rug, pak de barbell met een bovenhandse greep en trek de stang richting je navel terwijl je je schouderbladen samentrekt.",
+			HockeyBenefit: "Krachtige rugspieren voor een stabiele, diepe schaatshouding en sterke trekkracht aan de stick.",
+			VideoURL:      "https://www.youtube.com/watch?v=9efgcAjQe7E",
+			ImageURL:      "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&q=80&w=400&h=400",
+			Equipment:     []models.Equipment{bbell},
+		},
+		{
+			Name:          "Kettlebell Clean & Press",
+			Description:   "Breng de kettlebell explosief vanaf de grond naar je schouder (clean) en duw hem vervolgens recht omhoog boven je hoofd (press).",
+			HockeyBenefit: "Unilaterale coördinatie, schouderstabiliteit en explosieve krachtoverdracht.",
+			VideoURL:      "https://www.youtube.com/watch?v=grU7bF9X-QA",
+			ImageURL:      "https://images.unsplash.com/photo-1594737625785-a2bad332f13e?auto=format&fit=crop&q=80&w=400&h=400",
+			Equipment:     []models.Equipment{kbell},
+		},
 	}
 
-	db.Create(&exercises)
-	log.Println("INFO: Database seeded successfully.")
+	for _, ex := range exercises {
+		var existing models.Exercise
+		if err := db.Where("name = ?", ex.Name).First(&existing).Error; err != nil {
+			db.Create(&ex)
+		} else {
+			// Exercise exists, update it
+			existing.Description = ex.Description
+			existing.HockeyBenefit = ex.HockeyBenefit
+			existing.VideoURL = ex.VideoURL
+			existing.ImageURL = ex.ImageURL
+			db.Save(&existing)
+			db.Model(&existing).Association("Equipment").Replace(ex.Equipment)
+		}
+	}
+	log.Println("INFO: Database seeded and updated successfully.")
 }
