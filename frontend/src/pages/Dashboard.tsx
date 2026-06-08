@@ -513,6 +513,7 @@ export default function Dashboard() {
               </label>
               <input 
                 type="number" 
+                inputMode="decimal"
                 value={newWeight}
                 onChange={e => setNewWeight(e.target.value)}
                 placeholder="e.g. 85"

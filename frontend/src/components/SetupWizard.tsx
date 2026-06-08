@@ -202,6 +202,7 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
                 <label className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Height (cm)</label>
                 <input 
                   type="number" 
+                  inputMode="numeric"
                   value={formData.height}
                   onChange={e => updateForm('height', e.target.value)}
                   placeholder="e.g. 185"
@@ -214,6 +215,7 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
                   <label className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Weight (kg)</label>
                   <input 
                     type="number" 
+                    inputMode="decimal"
                     value={formData.currentWeight}
                     onChange={e => updateForm('currentWeight', e.target.value)}
                     placeholder="85"
@@ -224,6 +226,7 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
                   <label className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Target (kg)</label>
                   <input 
                     type="number" 
+                    inputMode="decimal"
                     value={formData.targetWeight}
                     onChange={e => updateForm('targetWeight', e.target.value)}
                     placeholder="80"

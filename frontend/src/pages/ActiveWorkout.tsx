@@ -358,6 +358,7 @@ export default function ActiveWorkout() {
                     <div className="col-span-4">
                       <input 
                         type="number" 
+                        inputMode="decimal"
                         placeholder="-"
                         value={set.weight || ''}
                         onChange={e => updateSet(currentExIdx, setIdx, 'weight', e.target.value)}
@@ -368,6 +369,7 @@ export default function ActiveWorkout() {
                     <div className="col-span-4">
                       <input 
                         type="number" 
+                        inputMode="numeric"
                         placeholder="-"
                         value={set.reps || ''}
                         onChange={e => updateSet(currentExIdx, setIdx, 'reps', e.target.value)}

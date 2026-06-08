@@ -208,6 +208,7 @@ export default function WorkoutBuilder() {
                           <label className="text-[10px] uppercase font-bold text-slate-500 mb-1 tracking-wider">{t('builder.workout.sets')}</label>
                           <input 
                             type="number" 
+                            inputMode="numeric"
                             value={item.sets}
                             onChange={(e) => updateItem(item.id, 'sets', parseInt(e.target.value) || 0)}
                             className="w-16 bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-white text-center focus:outline-none focus:border-blue-500"

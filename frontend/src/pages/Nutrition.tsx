@@ -570,6 +570,7 @@ export default function Nutrition() {
                       <Target className="w-3 h-3 text-blue-500" />
                       <input 
                         type="number" 
+                        inputMode="numeric"
                         value={goal}
                         onChange={(e) => setGoal(parseInt(e.target.value) || 0)}
                         className="w-12 lg:w-16 bg-transparent text-white font-bold text-base lg:text-lg text-center focus:outline-none border-b border-dashed border-slate-600 focus:border-blue-500"
@@ -787,6 +788,7 @@ export default function Nutrition() {
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('nutrition.manual.calories')}</label>
                           <input 
                             type="number" 
+                            inputMode="numeric"
                             value={manualCal}
                             onChange={e => setManualCal(e.target.value)}
                             placeholder="0"
@@ -799,6 +801,7 @@ export default function Nutrition() {
                           <label className="text-[10px] lg:text-xs font-bold text-blue-500 uppercase tracking-wider mb-1 block">Prot (g)</label>
                           <input 
                             type="number" 
+                            inputMode="decimal"
                             value={manualP}
                             onChange={e => setManualP(e.target.value)}
                             placeholder="0"
@@ -809,6 +812,7 @@ export default function Nutrition() {
                           <label className="text-[10px] lg:text-xs font-bold text-orange-500 uppercase tracking-wider mb-1 block">Carb (g)</label>
                           <input 
                             type="number" 
+                            inputMode="decimal"
                             value={manualC}
                             onChange={e => setManualC(e.target.value)}
                             placeholder="0"
@@ -819,6 +823,7 @@ export default function Nutrition() {
                           <label className="text-[10px] lg:text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1 block">Fat (g)</label>
                           <input 
                             type="number" 
+                            inputMode="decimal"
                             value={manualF}
                             onChange={e => setManualF(e.target.value)}
                             placeholder="0"
@@ -947,6 +952,7 @@ export default function Nutrition() {
                             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Calories (kcal)</label>
                             <input 
                               type="number" 
+                              inputMode="numeric"
                               value={verificationItem.calories}
                               onChange={e => setVerificationItem({...verificationItem, calories: parseInt(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none"
@@ -957,6 +963,7 @@ export default function Nutrition() {
                             <input 
                               type="number" 
                               step="0.1"
+                              inputMode="decimal"
                               value={verificationItem.protein}
                               onChange={e => setVerificationItem({...verificationItem, protein: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-blue-900/30 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none"
@@ -967,6 +974,7 @@ export default function Nutrition() {
                             <input 
                               type="number" 
                               step="0.1"
+                              inputMode="decimal"
                               value={verificationItem.carbs}
                               onChange={e => setVerificationItem({...verificationItem, carbs: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-orange-900/30 rounded-xl p-3 text-white focus:border-orange-500 focus:outline-none"
@@ -977,6 +985,7 @@ export default function Nutrition() {
                             <input 
                               type="number" 
                               step="0.1"
+                              inputMode="decimal"
                               value={verificationItem.fat}
                               onChange={e => setVerificationItem({...verificationItem, fat: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-emerald-900/30 rounded-xl p-3 text-white focus:border-emerald-500 focus:outline-none"
@@ -990,6 +999,7 @@ export default function Nutrition() {
                        <div className="flex items-center justify-center gap-4">
                           <input 
                             type="number" 
+                            inputMode="decimal"
                             value={portionGrams}
                             onChange={e => setPortionGrams(e.target.value)}
                             className="w-32 bg-slate-950 border border-blue-500/50 rounded-2xl p-4 text-2xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 focus:outline-none"
