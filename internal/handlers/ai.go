@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -193,10 +194,10 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 		prompt = append(prompt, genai.Text(systemPrompt))
 		
 		if strings.HasSuffix(strings.ToLower(fileName), ".fit") {
-			prompt = append(prompt, genai.Blob{
-				MIMEType: "application/octet-stream",
-				Data:     fileBytes,
-			})
+			// Base64 encode the binary FIT file so Gemini can parse it as a text prompt natively.
+			// This avoids 400 Unsupported MIME type application/octet-stream errors from the API.
+			encoded := base64.StdEncoding.EncodeToString(fileBytes)
+			prompt = append(prompt, genai.Text("Binary .FIT File Content (base64-encoded): "+encoded))
 		} else {
 			prompt = append(prompt, genai.Text("File Content: "+string(fileBytes)))
 		}
