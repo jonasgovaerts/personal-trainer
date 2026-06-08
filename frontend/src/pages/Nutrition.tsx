@@ -104,6 +104,7 @@ export default function Nutrition() {
 
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [historyLogs, setHistoryLogs] = useState<LogItem[]>([]);
+  const [workouts, setWorkouts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'manual' | 'ai' | 'barcode' | 'search'>('search');
   const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(getDefaultMealForTime());
   const [viewMode, setViewMode] = useState<'today' | 'month'>('today');
@@ -170,9 +171,19 @@ export default function Nutrition() {
       .catch(err => console.error("Failed to fetch history nutrition logs:", err));
   };
 
+  const fetchWorkouts = () => {
+    fetch(`/api/workouts/history?user_id=1&_t=${Date.now()}`, { cache: 'no-store' })
+      .then(res => res.json())
+      .then(data => {
+        setWorkouts(Array.isArray(data) ? data : []);
+      })
+      .catch(err => console.error("Failed to fetch workouts:", err));
+  };
+
   useEffect(() => {
     fetchTodayLogs();
     fetchMonthLogs();
+    fetchWorkouts();
   }, []);
   
   // Manual Entry State
@@ -202,13 +213,20 @@ export default function Nutrition() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Calculate today's burned calories from workouts
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const burnedCals = workouts
+    .filter(w => format(new Date(w.date), 'yyyy-MM-dd') === todayStr)
+    .reduce((sum, item) => sum + (item.calories_burned || 0), 0);
+
   const consumed = logs.reduce((sum, item) => sum + item.calories, 0);
   const consumedP = Number(logs.reduce((sum, item) => sum + item.protein, 0).toFixed(1));
   const consumedC = Number(logs.reduce((sum, item) => sum + item.carbs, 0).toFixed(1));
   const consumedF = Number(logs.reduce((sum, item) => sum + item.fat, 0).toFixed(1));
 
-  const remaining = goal - consumed;
-  const progressPercent = Math.min(100, Math.max(0, (consumed / goal) * 100));
+  const netConsumed = Math.max(0, consumed - burnedCals);
+  const remaining = goal - netConsumed;
+  const progressPercent = Math.min(100, Math.max(0, (netConsumed / goal) * 100));
 
   // Hydration variables
   const loggedWater = logs
@@ -651,7 +669,7 @@ export default function Nutrition() {
                       <circle cx="50" cy="50" r="40" className={cn("stroke-current transition-all duration-1000", remaining < 0 ? "text-red-500" : "text-emerald-500")} strokeWidth="8" fill="transparent" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * progressPercent) / 100} />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl lg:text-3xl font-bold text-white">{consumed}</span>
+                      <span className="text-2xl lg:text-3xl font-bold text-white">{netConsumed}</span>
                       <span className="text-[10px] lg:text-xs font-semibold text-slate-500 uppercase tracking-wider">KCAL</span>
                     </div>
                   </div>
@@ -677,6 +695,13 @@ export default function Nutrition() {
                       </p>
                     </div>
                   </div>
+
+                  {burnedCals > 0 && (
+                    <div className="mt-4 pt-4 border-t border-slate-800/50 w-full flex justify-around text-[10px] font-medium text-slate-400">
+                      <div>Food: <span className="font-semibold text-white">{consumed} kcal</span></div>
+                      <div>Active: <span className="font-semibold text-orange-400">-{burnedCals} kcal</span></div>
+                    </div>
+                  )}
 
                   {/* Macros Section */}
                   <div className="mt-8 w-full grid grid-cols-3 lg:grid-cols-1 gap-2 lg:gap-4 px-1 lg:px-2">
