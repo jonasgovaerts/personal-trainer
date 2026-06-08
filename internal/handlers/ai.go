@@ -159,7 +159,7 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userMessage := r.FormValue("message")
-	file, header, err := r.FormFile("file")
+	file, header, fileErr := r.FormFile("file")
 	
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
@@ -178,9 +178,9 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 	model := client.GenerativeModel("gemini-2.5-flash")
 	
 	var prompt []genai.Part
-	systemPrompt := "You are a professional fitness coach. "
+	systemPrompt := "You are a professional fitness coach and nutrition expert. " + getUserProgressContext() + " "
 	
-	if err == nil {
+	if fileErr == nil {
 		defer file.Close()
 		fileBytes, _ := io.ReadAll(file)
 		fileName := header.Filename
@@ -277,7 +277,7 @@ func handleSimpleChat(w http.ResponseWriter, message string) {
 	defer client.Close()
 
 	model := client.GenerativeModel("gemini-2.5-flash")
-	prompt := "You are a professional fitness coach and nutrition expert. Answer the following question briefly and encouragingly: " + message
+	prompt := "You are a professional fitness coach and nutrition expert. " + getUserProgressContext() + " Answer the following question briefly and encouragingly: " + message
 
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
@@ -297,5 +297,66 @@ func handleSimpleChat(w http.ResponseWriter, message string) {
 	}
 
 	respondError(w, http.StatusInternalServerError, "Unexpected AI response format")
+}
+
+func getUserProgressContext() string {
+	var user models.User
+	if err := db.DB.First(&user, 1).Error; err != nil {
+		// Fallback to default goals if user 1 not found
+		user = models.User{
+			GoalCalories: 2500,
+			GoalProtein:  150,
+			GoalCarbs:    250,
+			GoalFat:      80,
+		}
+	}
+
+	var logs []models.NutritionLog
+	today := time.Now().Format("2006-01-02")
+	db.DB.Where("user_id = ? AND DATE(timestamp) = ?", 1, today).Find(&logs)
+
+	var consumedCalories int
+	var consumedProtein, consumedCarbs, consumedFat float64
+	for _, l := range logs {
+		consumedCalories += l.Calories
+		consumedProtein += l.Protein
+		consumedCarbs += l.Carbs
+		consumedFat += l.Fat
+	}
+
+	var workouts []models.Workout
+	db.DB.Where("user_id = ? AND DATE(date) = ?", 1, today).Find(&workouts)
+	var burnedCalories int
+	for _, w := range workouts {
+		burnedCalories += w.CaloriesBurned
+	}
+
+	netConsumed := consumedCalories - burnedCalories
+	if netConsumed < 0 {
+		netConsumed = 0
+	}
+	remainingCals := user.GoalCalories - netConsumed
+
+	return fmt.Sprintf(
+		"Today's Date: %s. Here is the user's current daily progress:\n"+
+			"- Calorie Goal: %d kcal\n"+
+			"- Calories Consumed (Food): %d kcal\n"+
+			"- Calories Burned (Workouts): %d kcal\n"+
+			"- Net Calories: %d kcal\n"+
+			"- Calories Remaining: %d kcal\n"+
+			"- Protein: %.1f g consumed / %d g goal (Remaining: %.1f g)\n"+
+			"- Carbs: %.1f g consumed / %d g goal (Remaining: %.1f g)\n"+
+			"- Fat: %.1f g consumed / %d g goal (Remaining: %.1f g)\n\n"+
+			"Use this data to answer questions about their daily limits, consumed food, remaining targets, and general nutrition.",
+		today,
+		user.GoalCalories,
+		consumedCalories,
+		burnedCalories,
+		netConsumed,
+		remainingCals,
+		consumedProtein, user.GoalProtein, float64(user.GoalProtein)-consumedProtein,
+		consumedCarbs, user.GoalCarbs, float64(user.GoalCarbs)-consumedCarbs,
+		consumedFat, user.GoalFat, float64(user.GoalFat)-consumedFat,
+	)
 }
 
