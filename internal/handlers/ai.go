@@ -178,7 +178,8 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 	model := client.GenerativeModel("gemini-2.5-flash")
 	
 	var prompt []genai.Part
-	systemPrompt := "You are a professional fitness coach and nutrition expert. " + getUserProgressContext() + " "
+	systemPrompt := "You are a strict professional fitness coach and nutrition expert. " + getUserProgressContext() + " "
+	systemPrompt += "IMPORTANT MANDATE: You must ONLY answer questions directly related to fitness, workouts, training, exercises, gym, sports, body weight, physical health, diet, food, recipes, or nutrition. If the user's question or message is NOT related to these fitness and nutrition topics, you must refuse to answer and instead reply with exactly: 'I am sorry, but I can only help you with fitness and nutrition related questions.' "
 	
 	if fileErr == nil {
 		defer file.Close()
@@ -277,7 +278,7 @@ func handleSimpleChat(w http.ResponseWriter, message string) {
 	defer client.Close()
 
 	model := client.GenerativeModel("gemini-2.5-flash")
-	prompt := "You are a professional fitness coach and nutrition expert. " + getUserProgressContext() + " Answer the following question briefly and encouragingly: " + message
+	prompt := "You are a strict professional fitness coach and nutrition expert. " + getUserProgressContext() + " IMPORTANT MANDATE: You must ONLY answer questions directly related to fitness, workouts, training, exercises, gym, sports, body weight, physical health, diet, food, recipes, or nutrition. If the user's question or message is NOT related to these fitness and nutrition topics, you must refuse to answer and instead reply with exactly: 'I am sorry, but I can only help you with fitness and nutrition related questions.' Answer the following question briefly and encouragingly: " + message
 
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
