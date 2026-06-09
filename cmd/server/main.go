@@ -35,6 +35,7 @@ func main() {
 
 	mux.HandleFunc("GET /api/nutrition", handlers.GetNutritionLogs)
 	mux.HandleFunc("POST /api/nutrition", handlers.LogNutrition)
+	mux.HandleFunc("PUT /api/nutrition/{id}", handlers.UpdateNutritionLog)
 	mux.HandleFunc("DELETE /api/nutrition/{id}", handlers.DeleteNutritionLog)
 	mux.HandleFunc("POST /api/nutrition/analyze", handlers.AnalyzeNutrition)
 	mux.HandleFunc("GET /api/nutrition/search", handlers.SearchFood)

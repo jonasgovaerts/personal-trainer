@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Camera, ScanBarcode, Plus, Apple, CupSoda, Target, 
-  Sparkles, Activity, X, Trash2, Calendar, ChevronLeft, ChevronRight, Search as SearchIcon, Loader2, Utensils, AlertTriangle, Check
+import {
+  Camera, ScanBarcode, Plus, Apple, CupSoda, Target,
+  Sparkles, Activity, X, Trash2, Calendar, ChevronLeft, ChevronRight, Search as SearchIcon, Loader2, Utensils, AlertTriangle, Check, Pencil
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
@@ -116,6 +116,9 @@ export default function Nutrition() {
   // Verification Modal State
   const [verificationItem, setVerificationItem] = useState<StagedItem | null>(null);
   const [portionGrams, setPortionGrams] = useState<string>('100');
+
+  // Edit Modal State
+  const [editingLog, setEditingLog] = useState<LogItem | null>(null);
 
   useEffect(() => {
     if (user?.goal_calories) {
@@ -436,6 +439,54 @@ export default function Nutrition() {
         }
       }
     );
+  };
+
+  const updateLog = async (updated: LogItem) => {
+    try {
+      const res = await fetch(`/api/nutrition/${updated.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: parseInt(updated.id, 10),
+          user_id: 1, // Hardcode for prototype
+          barcode: updated.barcode,
+          name: updated.name,
+          calories: updated.calories,
+          protein: updated.protein,
+          carbs: updated.carbs,
+          fat: updated.fat,
+          portion_grams: updated.portionGrams,
+          type: updated.type,
+          meal: updated.meal,
+          timestamp: updated.timestamp
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to update log');
+
+      const savedItem = await res.json();
+      const mapped: LogItem = {
+        id: savedItem.id.toString(),
+        barcode: savedItem.barcode,
+        name: savedItem.name,
+        calories: savedItem.calories,
+        protein: savedItem.protein || 0,
+        carbs: savedItem.carbs || 0,
+        fat: savedItem.fat || 0,
+        type: itemType(savedItem.type),
+        meal: itemMeal(savedItem.meal),
+        timestamp: new Date(savedItem.timestamp),
+        portionGrams: savedItem.portion_grams
+      };
+
+      setLogs(prev => prev.map(item => item.id === mapped.id ? mapped : item));
+      setHistoryLogs(prev => prev.map(item => item.id === mapped.id ? mapped : item));
+      setEditingLog(null);
+      toast('Item updated successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      toast('Failed to update nutrition log.', 'error');
+    }
   };
 
   const handleManualAdd = () => {
@@ -1257,6 +1308,126 @@ export default function Nutrition() {
               </div>
             )}
 
+            {/* Edit Modal */}
+            {editingLog && (
+              <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                  <div className="bg-blue-600 p-6 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3 text-white">
+                       <Pencil className="w-6 h-6" />
+                       <h2 className="text-xl font-bold">{t('nutrition.editTitle') || 'Edit Food & Drink'}</h2>
+                    </div>
+                    <button onClick={() => setEditingLog(null)} className="text-blue-100 hover:text-white transition-colors">
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+
+                  <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
+                    <div className="flex gap-2 p-1 bg-slate-950 border border-slate-800 rounded-2xl">
+                      <button
+                        onClick={() => setEditingLog({ ...editingLog, type: 'food' })}
+                        className={cn("flex-1 py-2 text-[10px] font-bold rounded-xl transition-all", editingLog.type === 'food' ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-400")}
+                      >
+                        FOOD
+                      </button>
+                      <button
+                        onClick={() => setEditingLog({ ...editingLog, type: 'drink' })}
+                        className={cn("flex-1 py-2 text-[10px] font-bold rounded-xl transition-all", editingLog.type === 'drink' ? "bg-slate-800 text-white" : "text-slate-500 hover:text-slate-400")}
+                      >
+                        DRINK
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                       <div className={cn("w-16 h-16 rounded-2xl border-2 border-slate-800 flex items-center justify-center shrink-0", editingLog.type === 'food' ? "bg-orange-500/10 text-orange-500" : "bg-blue-500/10 text-blue-500")}>
+                          {editingLog.type === 'food' ? <Apple className="w-8 h-8" /> : <CupSoda className="w-8 h-8" />}
+                       </div>
+                       <div className="flex-1 min-w-0">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">{t('nutrition.manual.name') || 'Item Name'}</label>
+                          <input
+                            type="text"
+                            value={editingLog.name}
+                            onChange={e => setEditingLog({...editingLog, name: e.target.value})}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white font-bold focus:border-blue-500 focus:outline-none"
+                          />
+                       </div>
+                    </div>
+
+                    <div className="bg-slate-950/50 border border-slate-800 rounded-2xl p-5 space-y-4">
+                       <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">{t('nutrition.manual.calories') || 'Calories (kcal)'}</label>
+                            <input 
+                              type="number" 
+                              inputMode="numeric"
+                              value={editingLog.calories || ''}
+                              onChange={e => setEditingLog({...editingLog, calories: parseInt(e.target.value) || 0})}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-blue-500 uppercase mb-1 block">Protein (g)</label>
+                            <input 
+                              type="number" 
+                              step="0.1"
+                              inputMode="decimal"
+                              value={editingLog.protein || ''}
+                              onChange={e => setEditingLog({...editingLog, protein: parseFloat(e.target.value) || 0})}
+                              className="w-full bg-slate-900 border border-blue-900/30 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-orange-500 uppercase mb-1 block">Carbs (g)</label>
+                            <input 
+                              type="number" 
+                              step="0.1"
+                              inputMode="decimal"
+                              value={editingLog.carbs || ''}
+                              onChange={e => setEditingLog({...editingLog, carbs: parseFloat(e.target.value) || 0})}
+                              className="w-full bg-slate-900 border border-orange-900/30 rounded-xl p-3 text-white focus:border-orange-500 focus:outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-emerald-500 uppercase mb-1 block">Fat (g)</label>
+                            <input 
+                              type="number" 
+                              step="0.1"
+                              inputMode="decimal"
+                              value={editingLog.fat || ''}
+                              onChange={e => setEditingLog({...editingLog, fat: parseFloat(e.target.value) || 0})}
+                              className="w-full bg-slate-900 border border-emerald-900/30 rounded-xl p-3 text-white focus:border-emerald-500 focus:outline-none"
+                            />
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="bg-blue-600/5 border border-blue-600/20 rounded-2xl p-5">
+                       <label className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2 block text-center">Portion</label>
+                       <div className="flex items-center justify-center gap-4">
+                          <input 
+                            type="number" 
+                            inputMode="decimal"
+                            value={editingLog.portionGrams || ''}
+                            onChange={e => setEditingLog({...editingLog, portionGrams: parseFloat(e.target.value) || 0})}
+                            className="w-32 bg-slate-950 border border-blue-500/50 rounded-2xl p-4 text-2xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          />
+                          <span className="text-xl font-bold text-slate-500 uppercase">{editingLog.type === 'drink' ? 'ml' : 'g'}</span>
+                       </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 bg-slate-950/50 border-t border-slate-800 flex shrink-0">
+                    <button 
+                      onClick={() => updateLog(editingLog)}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-blue-600/20 uppercase tracking-widest text-sm"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Meal Builder Floating Panel */}
             {stagedItems.length > 0 && (
               <div className="fixed bottom-24 lg:bottom-8 left-4 right-4 sm:left-auto sm:right-8 sm:w-80 bg-slate-900 border border-blue-500/30 rounded-2xl shadow-2xl z-[40] overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
@@ -1326,10 +1497,11 @@ export default function Nutrition() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center justify-end gap-3 pl-4 shrink-0">
-                                <div className="text-right">
+                              <div className="flex items-center justify-end gap-1 pl-4 shrink-0">
+                                <div className="text-right mr-2">
                                   <p className="font-bold text-sm text-white whitespace-nowrap">{log.calories} <span className="text-xs text-slate-500 font-normal">kcal</span></p>
                                 </div>
+                                <button onClick={() => setEditingLog(log)} className="text-slate-500 hover:text-blue-500 transition-colors p-1.5 rounded-lg hover:bg-slate-800"><Pencil className="w-4 h-4" /></button>
                                 <button onClick={() => deleteLog(log.id)} className="text-slate-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-slate-800"><Trash2 className="w-4 h-4" /></button>
                               </div>
                             </div>

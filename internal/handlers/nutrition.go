@@ -309,3 +309,49 @@ func DeleteNutritionLog(w http.ResponseWriter, r *http.Request) {
 
 	respondJSON(w, http.StatusOK, map[string]string{"message": "Log deleted successfully"})
 }
+
+// UpdateNutritionLog updates a specific nutrition log
+func UpdateNutritionLog(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid log ID")
+		return
+	}
+
+	var log models.NutritionLog
+	if err := db.DB.First(&log, id).Error; err != nil {
+		respondError(w, http.StatusNotFound, "Log not found")
+		return
+	}
+
+	var req models.NutritionLog
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Update fields
+	log.Name = req.Name
+	log.Calories = req.Calories
+	log.Protein = req.Protein
+	log.Carbs = req.Carbs
+	log.Fat = req.Fat
+	log.PortionGrams = req.PortionGrams
+	if req.Type != "" {
+		log.Type = req.Type
+	}
+	if req.Meal != "" {
+		log.Meal = req.Meal
+	}
+	if !req.Timestamp.IsZero() {
+		log.Timestamp = req.Timestamp
+	}
+
+	if err := db.DB.Save(&log).Error; err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to update log")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, log)
+}

@@ -136,6 +136,8 @@ const resources = {
       "nutrition.ai.cancel": "Cancel",
       "nutrition.delete": "Delete item",
       "nutrition.confirmDelete": "Are you sure you want to delete this log?",
+      "nutrition.edit": "Edit item",
+      "nutrition.editTitle": "Edit Food & Drink",
       "nutrition.today": "Today's Log",
       "nutrition.empty": "No items logged today.",
       "nutrition.meal.breakfast": "Breakfast",
