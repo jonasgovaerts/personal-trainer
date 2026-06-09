@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Target, Settings, RotateCcw, Dumbbell, Save } from 'lucide-react';
+import { User, Target, Settings, RotateCcw, Dumbbell, Save, LogOut } from 'lucide-react';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
 import { useUI } from '../contexts/UIContext';
@@ -218,6 +218,21 @@ export default function Profile() {
                 className="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 px-6 rounded-xl transition-colors flex items-center gap-2 shrink-0"
               >
                 <RotateCcw className="w-4 h-4" /> {t('profile.retakeBtn')}
+              </button>
+            </div>
+
+            <div className="bg-red-950/10 border border-red-900/20 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+              <div>
+                <h4 className="font-semibold text-red-500">{t('profile.logoutTitle')}</h4>
+                <p className="text-sm text-slate-400">{t('profile.logoutDesc')}</p>
+              </div>
+              <button 
+                onClick={() => {
+                  window.location.href = 'https://authentik.jonasg.be/application/o/personal-trainer/end-session/';
+                }}
+                className="bg-red-600 hover:bg-red-500 text-white font-semibold py-2.5 px-6 rounded-xl transition-colors flex items-center gap-2 shrink-0"
+              >
+                <LogOut className="w-4 h-4" /> {t('profile.logoutBtn')}
               </button>
             </div>
           </div>
