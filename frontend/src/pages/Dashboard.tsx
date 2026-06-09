@@ -221,9 +221,9 @@ export default function Dashboard() {
 
   const consumedCals = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.calories || 0), 0) : 0;
   const netConsumedCals = Math.max(0, consumedCals - burnedCals);
-  const consumedP = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.protein || 0), 0) : 0;
-  const consumedC = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.carbs || 0), 0) : 0;
-  const consumedF = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.fat || 0), 0) : 0;
+  const consumedP = Array.isArray(nutritionLogs) ? Number(nutritionLogs.reduce((sum, item) => sum + (item.protein || 0), 0).toFixed(2)) : 0;
+  const consumedC = Array.isArray(nutritionLogs) ? Number(nutritionLogs.reduce((sum, item) => sum + (item.carbs || 0), 0).toFixed(2)) : 0;
+  const consumedF = Array.isArray(nutritionLogs) ? Number(nutritionLogs.reduce((sum, item) => sum + (item.fat || 0), 0).toFixed(2)) : 0;
 
   // Flat chart if no history
   const chartData = totalWorkouts === 0 ? [

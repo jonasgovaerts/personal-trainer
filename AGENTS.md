@@ -167,3 +167,8 @@ Implement the following RESTful endpoints:
 1. **Docker:** `Dockerfile` using multi-stage builds (golang builder -> alpine runtime) to compile the Go server and serve the Vite React static build (`/static`).
 2. **CI/CD:** GitHub Actions workflow to automatically build the Docker image for both `amd64` and `arm64` architectures, pushing to the GitHub Container Registry.
 3. **Kubernetes:** Manifests (`k8s/`) including Deployments, Services, and PersistentVolumeClaims for both the application and the PostgreSQL database. Includes a `Secret` for injecting the `GEMINI_API_KEY` environment variable.
+
+---
+
+## 8. Git & Deployment Permissions
+* **Git Operations:** The AI assistant is explicitly authorized to commit and push changes directly to the remote Git repository to trigger automated CI/CD workflows and deployments.

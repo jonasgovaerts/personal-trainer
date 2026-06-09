@@ -220,9 +220,9 @@ export default function Nutrition() {
     .reduce((sum, item) => sum + (item.calories_burned || 0), 0);
 
   const consumed = logs.reduce((sum, item) => sum + item.calories, 0);
-  const consumedP = Number(logs.reduce((sum, item) => sum + item.protein, 0).toFixed(1));
-  const consumedC = Number(logs.reduce((sum, item) => sum + item.carbs, 0).toFixed(1));
-  const consumedF = Number(logs.reduce((sum, item) => sum + item.fat, 0).toFixed(1));
+  const consumedP = Number(logs.reduce((sum, item) => sum + item.protein, 0).toFixed(2));
+  const consumedC = Number(logs.reduce((sum, item) => sum + item.carbs, 0).toFixed(2));
+  const consumedF = Number(logs.reduce((sum, item) => sum + item.fat, 0).toFixed(2));
 
   const netConsumed = Math.max(0, consumed - burnedCals);
   const remaining = goal - netConsumed;
@@ -230,7 +230,7 @@ export default function Nutrition() {
 
   // Hydration variables
   const loggedWater = logs
-    .filter(l => l.name.toLowerCase().trim() === 'water' && l.type === 'drink')
+    .filter(l => l.type === 'drink')
     .reduce((sum, l) => sum + (l.portionGrams || 100), 0);
   const waterTarget = 2000;
   const waterProgress = Math.min(100, (loggedWater / waterTarget) * 100);
@@ -502,9 +502,9 @@ export default function Nutrition() {
     const finalItem: StagedItem = {
       ...verificationItem,
       calories: Math.round(verificationItem.calories * factor),
-      protein: Number((verificationItem.protein * factor).toFixed(1)),
-      carbs: Number((verificationItem.carbs * factor).toFixed(1)),
-      fat: Number((verificationItem.fat * factor).toFixed(1)),
+      protein: Number((verificationItem.protein * factor).toFixed(2)),
+      carbs: Number((verificationItem.carbs * factor).toFixed(2)),
+      fat: Number((verificationItem.fat * factor).toFixed(2)),
       portionGrams: grams
     };
 
