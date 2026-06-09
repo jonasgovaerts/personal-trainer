@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/user/personal-trainer/internal/db"
@@ -32,6 +33,14 @@ func respondError(w http.ResponseWriter, code int, message string) {
 
 // GetCurrentUser retrieves the logged-in user from Authentik headers or defaults to ID 1 in development
 func GetCurrentUser(r *http.Request) models.User {
+	// Log incoming headers starting with X-, Remote-, or Auth- to diagnose Authentik configuration
+	for k, v := range r.Header {
+		lowerK := strings.ToLower(k)
+		if strings.HasPrefix(lowerK, "x-") || strings.HasPrefix(lowerK, "remote") || strings.HasPrefix(lowerK, "auth") {
+			log.Printf("DEBUG HEADER: %s = %v", k, v)
+		}
+	}
+
 	username := r.Header.Get("X-Authentik-Username")
 	name := r.Header.Get("X-Authentik-Name")
 	if name == "" {
