@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: personal-trainer-homelab
+  namespace: personal-trainer
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: personal-trainer.homelab.jonasg.be
+    http:
+      paths:
+      - backend:
+          service:
+            name: personal-trainer-service
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - personal-trainer.homelab.jonasg.be
+    - personal-trainer.jonasg.be
+    secretName: personal-trainer-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: personal-trainer-public
+  namespace: personal-trainer
+  annotations:
+    external-dns.alpha.kubernetes.io/ignore: "true"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: personal-trainer.jonasg.be
+    http:
+      paths:
+      - backend:
+          service:
+            name: personal-trainer-service
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - personal-trainer.homelab.jonasg.be
+    - personal-trainer.jonasg.be
+    secretName: personal-trainer-tls
