@@ -1,12 +1,13 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: personal-trainer-homelab
+  name: personal-trainer
   namespace: personal-trainer
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-cloudflare
-    external-dns.alpha.kubernetes.io/ignore: "true"
+    external-dns.alpha.kubernetes.io/hostname: personal-trainer.homelab.jonasg.be
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: personal-trainer-authentik-auth@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
@@ -20,23 +21,6 @@ spec:
               number: 80
         path: /
         pathType: Prefix
-  tls:
-  - hosts:
-    - personal-trainer.homelab.jonasg.be
-    - personal-trainer.jonasg.be
-    secretName: personal-trainer-tls
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: personal-trainer-public
-  namespace: personal-trainer
-  annotations:
-    external-dns.alpha.kubernetes.io/ignore: "true"
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-spec:
-  ingressClassName: traefik
-  rules:
   - host: personal-trainer.jonasg.be
     http:
       paths:
