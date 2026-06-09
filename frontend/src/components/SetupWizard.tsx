@@ -95,7 +95,7 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
 
     try {
       // Save profile and goals to backend
-      await fetch('/api/user/1/profile', {
+      await fetch('/api/user/me/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

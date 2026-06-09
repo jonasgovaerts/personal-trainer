@@ -129,7 +129,7 @@ export default function Nutrition() {
 
   // Fetch today's logs
   const fetchTodayLogs = () => {
-    fetch(`/api/nutrition?user_id=1&_t=${Date.now()}`, { cache: 'no-store' })
+    fetch(`/api/nutrition?user_id=me&_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data && Array.isArray(data)) {
@@ -367,7 +367,7 @@ export default function Nutrition() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: 1,
+          user_id: user?.id,
           barcode,
           name,
           calories,
@@ -449,7 +449,7 @@ export default function Nutrition() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: parseInt(updated.id, 10),
-          user_id: 1, // Hardcode for prototype
+          user_id: user?.id,
           barcode: updated.barcode,
           name: updated.name,
           calories: updated.calories,

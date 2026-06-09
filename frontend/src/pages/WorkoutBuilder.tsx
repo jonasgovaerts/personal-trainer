@@ -32,7 +32,7 @@ export default function WorkoutBuilder() {
   const [workoutName, setWorkoutName] = useState('New Hockey Strength Phase 1');
 
   useEffect(() => {
-    fetch('/api/exercises?user_id=1')
+    fetch('/api/exercises?user_id=me')
       .then(res => res.json())
       .then(data => {
         setExerciseLibrary(data || []);

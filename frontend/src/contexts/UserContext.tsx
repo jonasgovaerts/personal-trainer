@@ -31,7 +31,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const res = await fetch('/api/user/1');
+      const res = await fetch('/api/user/me');
       if (res.ok) {
         const data = await res.json();
         setUser(data);

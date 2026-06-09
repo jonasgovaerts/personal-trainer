@@ -187,7 +187,7 @@ export default function PredefinedWorkouts() {
 
   useEffect(() => {
     // Fetch exercises filtered by user's equipment
-    fetch('/api/exercises?user_id=1')
+    fetch('/api/exercises?user_id=me')
       .then(res => res.json())
       .then(data => {
         if (data) {

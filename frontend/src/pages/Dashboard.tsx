@@ -40,8 +40,8 @@ export default function Dashboard() {
 
   const fetchDashboardData = () => {
     Promise.all([
-      fetch(`/api/workouts/history?user_id=1&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()),
-      fetch(`/api/nutrition?user_id=1&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json())
+      fetch(`/api/workouts/history?user_id=me&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()),
+      fetch(`/api/nutrition?user_id=me&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json())
     ])
     .then(([workoutsData, nutritionData]) => {
       setHistory(Array.isArray(workoutsData) ? workoutsData : []);

@@ -27,7 +27,7 @@ export default function Analytics() {
   const [timeRange, setTimeRange] = useState('7d');
 
   const fetchAnalyticsData = () => {
-    fetch('/api/workouts/history?user_id=1')
+    fetch('/api/workouts/history?user_id=me')
       .then(res => res.json())
       .then(data => {
         setHistory(Array.isArray(data) ? data : []);

@@ -81,7 +81,7 @@ export default function Profile() {
   const saveEquipment = async () => {
     setSavingEq(true);
     try {
-      const res = await fetch('/api/user/1/equipment', {
+      const res = await fetch('/api/user/me/equipment', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ equipment_ids: userEquipmentIds })

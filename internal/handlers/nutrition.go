@@ -15,15 +15,18 @@ import (
 // GetNutritionLogs fetches nutrition logs for a user
 func GetNutritionLogs(w http.ResponseWriter, r *http.Request) {
 	userIDStr := r.URL.Query().Get("user_id")
-	if userIDStr == "" {
-		respondError(w, http.StatusBadRequest, "Missing user_id parameter")
-		return
-	}
-	
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid user_id")
-		return
+	var userID int
+
+	if userIDStr == "" || userIDStr == "me" {
+		user := GetCurrentUser(r)
+		userID = int(user.ID)
+	} else {
+		var err error
+		userID, err = strconv.Atoi(userIDStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid user_id")
+			return
+		}
 	}
 
 	daysStr := r.URL.Query().Get("days")
@@ -53,7 +56,8 @@ func LogNutrition(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.UserID == 0 {
-		req.UserID = 1 // Hardcode for prototype
+		user := GetCurrentUser(r)
+		req.UserID = user.ID
 	}
 
 	if req.Timestamp.IsZero() {

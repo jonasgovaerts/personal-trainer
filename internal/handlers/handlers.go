@@ -30,21 +30,71 @@ func respondError(w http.ResponseWriter, code int, message string) {
 	respondJSON(w, code, map[string]string{"error": message})
 }
 
-// --- User Handlers ---
+// GetCurrentUser retrieves the logged-in user from Authentik headers or defaults to ID 1 in development
+func GetCurrentUser(r *http.Request) models.User {
+	username := r.Header.Get("X-Authentik-Username")
+	name := r.Header.Get("X-Authentik-Name")
+	if name == "" {
+		name = r.Header.Get("X-Authentik-Email")
+	}
 
-// GetUser fetches a user by ID
-func GetUser(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "Ongeldig gebruikers ID")
-		return
+	if username == "" {
+		// Fallback to user ID 1 in development
+		var user models.User
+		if err := db.DB.Preload("Equipment").First(&user, 1).Error; err != nil {
+			// Auto-create user 1 if not exists
+			user = models.User{
+				ID:             1,
+				Username:       "devuser",
+				Name:           "Developer User",
+				GoalCalories:   2500,
+				GoalProtein:    150,
+				GoalCarbs:      250,
+				GoalFat:        80,
+				HockeyPosition: "Aanvaller",
+			}
+			db.DB.Create(&user)
+		}
+		return user
 	}
 
 	var user models.User
-	if err := db.DB.Preload("Equipment").First(&user, id).Error; err != nil {
-		respondError(w, http.StatusNotFound, "Gebruiker niet gevonden")
-		return
+	if err := db.DB.Preload("Equipment").Where("username = ?", username).First(&user).Error; err != nil {
+		// Auto-provision user on first login
+		user = models.User{
+			Username:       username,
+			Name:           name,
+			GoalCalories:   2500,
+			GoalProtein:    150,
+			GoalCarbs:      250,
+			GoalFat:        80,
+			HockeyPosition: "Aanvaller",
+		}
+		db.DB.Create(&user)
+	}
+	return user
+}
+
+// --- User Handlers ---
+
+// GetUser fetches a user by ID or 'me'
+func GetUser(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	var user models.User
+
+	if idStr == "me" {
+		user = GetCurrentUser(r)
+	} else {
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Ongeldig gebruikers ID")
+			return
+		}
+
+		if err := db.DB.Preload("Equipment").First(&user, id).Error; err != nil {
+			respondError(w, http.StatusNotFound, "Gebruiker niet gevonden")
+			return
+		}
 	}
 
 	respondJSON(w, http.StatusOK, user)
@@ -53,10 +103,23 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 // UpdateUserEquipment updates the equipment available to a user
 func UpdateUserEquipment(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
-	userID, err := strconv.Atoi(idStr)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "Ongeldig gebruikers ID")
-		return
+	var user models.User
+
+	if idStr == "me" {
+		user = GetCurrentUser(r)
+	} else {
+		userID, err := strconv.Atoi(idStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Ongeldig gebruikers ID")
+			return
+		}
+
+		if err := db.DB.First(&user, userID).Error; err != nil {
+			// Create user if not exists for simplicity in this prototype
+			user = models.User{Username: "speler_" + idStr, HockeyPosition: "Aanvaller"}
+			user.ID = uint(userID)
+			db.DB.Create(&user)
+		}
 	}
 
 	var req struct {
@@ -65,14 +128,6 @@ func UpdateUserEquipment(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Ongeldige aanvraaggegevens")
 		return
-	}
-
-	var user models.User
-	if err := db.DB.First(&user, userID).Error; err != nil {
-		// Create user if not exists for simplicity in this prototype
-		user = models.User{Username: "speler_" + idStr, HockeyPosition: "Aanvaller"}
-		user.ID = uint(userID)
-		db.DB.Create(&user)
 	}
 
 	var equipment []models.Equipment
@@ -92,24 +147,29 @@ func UpdateUserEquipment(w http.ResponseWriter, r *http.Request) {
 // UpdateUserProfile updates the user's personal metrics and goals
 func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
-	userID, err := strconv.Atoi(idStr)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "Ongeldig gebruikers ID")
-		return
+	var user models.User
+
+	if idStr == "me" {
+		user = GetCurrentUser(r)
+	} else {
+		userID, err := strconv.Atoi(idStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Ongeldig gebruikers ID")
+			return
+		}
+
+		if err := db.DB.First(&user, userID).Error; err != nil {
+			// Create user if not exists for simplicity in this prototype
+			user = models.User{Username: "speler_" + idStr, HockeyPosition: "Aanvaller"}
+			user.ID = uint(userID)
+			db.DB.Create(&user)
+		}
 	}
 
 	var req models.User
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Ongeldige aanvraaggegevens")
 		return
-	}
-
-	var user models.User
-	if err := db.DB.First(&user, userID).Error; err != nil {
-		// Create user if not exists for simplicity in this prototype
-		user = models.User{Username: "speler_" + idStr, HockeyPosition: "Aanvaller"}
-		user.ID = uint(userID)
-		db.DB.Create(&user)
 	}
 
 	// Update fields
@@ -146,51 +206,59 @@ func GetExercises(w http.ResponseWriter, r *http.Request) {
 	userIDStr := r.URL.Query().Get("user_id")
 
 	var exercises []models.Exercise
-	
-	if userIDStr != "" {
+	var user models.User
+	var hasUser bool
+
+	if userIDStr == "me" || (userIDStr == "" && r.Header.Get("X-Authentik-Username") != "") {
+		user = GetCurrentUser(r)
+		hasUser = true
+	} else if userIDStr != "" {
 		userID, err := strconv.Atoi(userIDStr)
 		if err == nil {
-			var user models.User
 			if err := db.DB.Preload("Equipment").First(&user, userID).Error; err == nil {
-				// Get IDs of user's equipment
-				userEqMap := make(map[uint]bool)
-				for _, eq := range user.Equipment {
-					userEqMap[eq.ID] = true
-				}
-				
-				// Always assume the user has Bodyweight ("Lichaamsgewicht") available
-				var bwEq models.Equipment
-				if err := db.DB.Where("name = ?", "Lichaamsgewicht").First(&bwEq).Error; err == nil {
-					userEqMap[bwEq.ID] = true
-				}
-
-				// Fetch all exercises
-				var allExercises []models.Exercise
-				db.DB.Preload("Equipment").Find(&allExercises)
-
-				// Filter exercises where user has AT LEAST ONE of the valid equipment options
-				for _, ex := range allExercises {
-					if len(ex.Equipment) == 0 {
-						exercises = append(exercises, ex)
-						continue
-					}
-
-					hasAny := false
-					for _, reqEq := range ex.Equipment {
-						if userEqMap[reqEq.ID] {
-							hasAny = true
-							break
-						}
-					}
-					if hasAny {
-						exercises = append(exercises, ex)
-					}
-				}
-				
-				respondJSON(w, http.StatusOK, exercises)
-				return
+				hasUser = true
 			}
 		}
+	}
+
+	if hasUser {
+		// Get IDs of user's equipment
+		userEqMap := make(map[uint]bool)
+		for _, eq := range user.Equipment {
+			userEqMap[eq.ID] = true
+		}
+		
+		// Always assume the user has Bodyweight ("Lichaamsgewicht") available
+		var bwEq models.Equipment
+		if err := db.DB.Where("name = ?", "Lichaamsgewicht").First(&bwEq).Error; err == nil {
+			userEqMap[bwEq.ID] = true
+		}
+
+		// Fetch all exercises
+		var allExercises []models.Exercise
+		db.DB.Preload("Equipment").Find(&allExercises)
+
+		// Filter exercises where user has AT LEAST ONE of the valid equipment options
+		for _, ex := range allExercises {
+			if len(ex.Equipment) == 0 {
+				exercises = append(exercises, ex)
+				continue
+			}
+
+			hasAny := false
+			for _, reqEq := range ex.Equipment {
+				if userEqMap[reqEq.ID] {
+					hasAny = true
+					break
+				}
+			}
+			if hasAny {
+				exercises = append(exercises, ex)
+			}
+		}
+		
+		respondJSON(w, http.StatusOK, exercises)
+		return
 	}
 
 	// Default: return all exercises
@@ -216,6 +284,11 @@ func CreateWorkout(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Ongeldige aanvraaggegevens")
 		return
+	}
+
+	if req.UserID == 0 {
+		user := GetCurrentUser(r)
+		req.UserID = user.ID
 	}
 
 	workout := models.Workout{
@@ -260,15 +333,18 @@ func LogWorkoutSet(w http.ResponseWriter, r *http.Request) {
 // GetWorkoutHistory gets past workouts for a user
 func GetWorkoutHistory(w http.ResponseWriter, r *http.Request) {
 	userIDStr := r.URL.Query().Get("user_id")
-	if userIDStr == "" {
-		respondError(w, http.StatusBadRequest, "Ontbrekende user_id parameter")
-		return
-	}
-	
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "Ongeldig user_id")
-		return
+	var userID int
+
+	if userIDStr == "" || userIDStr == "me" {
+		user := GetCurrentUser(r)
+		userID = int(user.ID)
+	} else {
+		var err error
+		userID, err = strconv.Atoi(userIDStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Ongeldig user_id")
+			return
+		}
 	}
 
 	var workouts []models.Workout

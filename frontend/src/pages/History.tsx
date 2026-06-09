@@ -36,7 +36,7 @@ export default function History() {
 
   const fetchHistory = () => {
     setLoading(true);
-    fetch(`/api/workouts/history?user_id=1&_t=${Date.now()}`, { cache: 'no-store' })
+    fetch(`/api/workouts/history?user_id=me&_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         setHistory(data || []);

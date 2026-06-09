@@ -21,7 +21,7 @@ export default function Exercises() {
 
   useEffect(() => {
     // Fetch exercises relevant to the user
-    fetch('/api/exercises?user_id=1')
+    fetch('/api/exercises?user_id=me')
       .then(res => res.json())
       .then(data => {
         setExercises(data || []);

@@ -145,13 +145,15 @@ func AnalyzeNutrition(w http.ResponseWriter, r *http.Request) {
 
 // ChatWithAI handles general fitness and nutrition questions, and workout file analysis
 func ChatWithAI(w http.ResponseWriter, r *http.Request) {
+	user := GetCurrentUser(r)
+
 	// Parse multipart form to handle potential file uploads
 	err := r.ParseMultipartForm(10 << 20) // 10 MB limit
 	if err != nil {
 		// If it fails, try to see if it's just a JSON request
 		var req ChatRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
-			handleSimpleChat(w, req.Message)
+			handleSimpleChat(w, req.Message, user.ID)
 			return
 		}
 		respondError(w, http.StatusBadRequest, "Invalid request payload")
@@ -178,7 +180,7 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 	model := client.GenerativeModel("gemini-2.5-flash")
 	
 	var prompt []genai.Part
-	systemPrompt := "You are a strict professional fitness coach and nutrition expert. " + getUserProgressContext() + " "
+	systemPrompt := "You are a strict professional fitness coach and nutrition expert. " + getUserProgressContext(user.ID) + " "
 	systemPrompt += "IMPORTANT MANDATE: You must ONLY answer questions directly related to fitness, workouts, training, exercises, gym, sports, body weight, physical health, diet, food, recipes, or nutrition. If the user's question or message is NOT related to these fitness and nutrition topics, you must refuse to answer and instead reply with exactly: 'I am sorry, but I can only help you with fitness and nutrition related questions.' "
 	
 	if fileErr == nil {
@@ -254,7 +256,7 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 					
 					// Auto-save the workout to the database
 					newWorkout := models.Workout{
-						UserID:         1, // Hardcoded for prototype
+						UserID:         user.ID,
 						Date:           time.Now(),
 						Notes:          "Imported via AI Coach: " + data.Name,
 						CaloriesBurned: data.Calories,
@@ -273,7 +275,7 @@ func ChatWithAI(w http.ResponseWriter, r *http.Request) {
 	respondError(w, http.StatusInternalServerError, "Unexpected AI response format")
 }
 
-func handleSimpleChat(w http.ResponseWriter, message string) {
+func handleSimpleChat(w http.ResponseWriter, message string, userID uint) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		respondError(w, http.StatusInternalServerError, "Gemini API Key is not configured")
@@ -289,7 +291,7 @@ func handleSimpleChat(w http.ResponseWriter, message string) {
 	defer client.Close()
 
 	model := client.GenerativeModel("gemini-2.5-flash")
-	prompt := "You are a strict professional fitness coach and nutrition expert. " + getUserProgressContext() + " IMPORTANT MANDATE: You must ONLY answer questions directly related to fitness, workouts, training, exercises, gym, sports, body weight, physical health, diet, food, recipes, or nutrition. If the user's question or message is NOT related to these fitness and nutrition topics, you must refuse to answer and instead reply with exactly: 'I am sorry, but I can only help you with fitness and nutrition related questions.' Answer the following question briefly and encouragingly: " + message
+	prompt := "You are a strict professional fitness coach and nutrition expert. " + getUserProgressContext(userID) + " IMPORTANT MANDATE: You must ONLY answer questions directly related to fitness, workouts, training, exercises, gym, sports, body weight, physical health, diet, food, recipes, or nutrition. If the user's question or message is NOT related to these fitness and nutrition topics, you must refuse to answer and instead reply with exactly: 'I am sorry, but I can only help you with fitness and nutrition related questions.' Answer the following question briefly and encouragingly: " + message
 
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
@@ -311,10 +313,10 @@ func handleSimpleChat(w http.ResponseWriter, message string) {
 	respondError(w, http.StatusInternalServerError, "Unexpected AI response format")
 }
 
-func getUserProgressContext() string {
+func getUserProgressContext(userID uint) string {
 	var user models.User
-	if err := db.DB.First(&user, 1).Error; err != nil {
-		// Fallback to default goals if user 1 not found
+	if err := db.DB.First(&user, userID).Error; err != nil {
+		// Fallback to default goals if user not found
 		user = models.User{
 			GoalCalories: 2500,
 			GoalProtein:  150,
@@ -325,7 +327,7 @@ func getUserProgressContext() string {
 
 	var logs []models.NutritionLog
 	today := time.Now().Format("2006-01-02")
-	db.DB.Where("user_id = ? AND DATE(timestamp) = ?", 1, today).Find(&logs)
+	db.DB.Where("user_id = ? AND DATE(timestamp) = ?", userID, today).Find(&logs)
 
 	var consumedCalories int
 	var consumedProtein, consumedCarbs, consumedFat float64
@@ -337,7 +339,7 @@ func getUserProgressContext() string {
 	}
 
 	var workouts []models.Workout
-	db.DB.Where("user_id = ? AND DATE(date) = ?", 1, today).Find(&workouts)
+	db.DB.Where("user_id = ? AND DATE(date) = ?", userID, today).Find(&workouts)
 	var burnedCalories int
 	for _, w := range workouts {
 		burnedCalories += w.CaloriesBurned
