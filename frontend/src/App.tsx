@@ -19,7 +19,7 @@ function AppContent() {
 
   useEffect(() => {
     if (!loading) {
-      if (!user || !user.name) {
+      if (!user || !user.name || !user.gender || user.current_weight === 0) {
         setShowSetup(true);
       } else {
         setShowSetup(false);
