@@ -39,6 +39,7 @@ func GetCurrentUser(r *http.Request) models.User {
 	}
 
 	if username == "" {
+		log.Println("DEBUG: No Authentik username header found, falling back to local Dev User")
 		// Fallback to user ID 1 in development
 		var user models.User
 		if err := db.DB.Preload("Equipment").First(&user, 1).Error; err != nil {
@@ -60,6 +61,7 @@ func GetCurrentUser(r *http.Request) models.User {
 
 	var user models.User
 	if err := db.DB.Preload("Equipment").Where("username = ?", username).First(&user).Error; err != nil {
+		log.Printf("DEBUG: Authentik forwarded NEW user '%s' (%s). Auto-provisioning in database.", username, name)
 		// Auto-provision user on first login
 		user = models.User{
 			Username:       username,
@@ -71,6 +73,8 @@ func GetCurrentUser(r *http.Request) models.User {
 			HockeyPosition: "Aanvaller",
 		}
 		db.DB.Create(&user)
+	} else {
+		log.Printf("DEBUG: Authentik forwarded active user '%s' (%s)", username, name)
 	}
 	return user
 }
