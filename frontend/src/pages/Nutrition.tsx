@@ -119,6 +119,7 @@ export default function Nutrition() {
 
   // Edit Modal State
   const [editingLog, setEditingLog] = useState<LogItem | null>(null);
+  const [originalLog, setOriginalLog] = useState<LogItem | null>(null);
 
   useEffect(() => {
     if (user?.goal_calories) {
@@ -1408,7 +1409,26 @@ export default function Nutrition() {
                             type="number" 
                             inputMode="decimal"
                             value={editingLog.portionGrams || ''}
-                            onChange={e => setEditingLog({...editingLog, portionGrams: parseFloat(e.target.value) || 0})}
+                            onChange={e => {
+                              const newPortion = parseFloat(e.target.value) || 0;
+                              const oldPortion = originalLog?.portionGrams || 0;
+                              if (oldPortion > 0) {
+                                const ratio = newPortion / oldPortion;
+                                setEditingLog({
+                                  ...editingLog,
+                                  portionGrams: newPortion,
+                                  calories: Math.round((originalLog?.calories || 0) * ratio),
+                                  protein: Math.round(((originalLog?.protein || 0) * ratio) * 10) / 10,
+                                  carbs: Math.round(((originalLog?.carbs || 0) * ratio) * 10) / 10,
+                                  fat: Math.round(((originalLog?.fat || 0) * ratio) * 10) / 10
+                                });
+                              } else {
+                                setEditingLog({
+                                  ...editingLog,
+                                  portionGrams: newPortion
+                                });
+                              }
+                            }}
                             className="w-32 bg-slate-950 border border-blue-500/50 rounded-2xl p-4 text-2xl font-bold text-white text-center focus:ring-2 focus:ring-blue-500 focus:outline-none"
                           />
                           <span className="text-xl font-bold text-slate-500 uppercase">{editingLog.type === 'drink' ? 'ml' : 'g'}</span>
@@ -1501,7 +1521,7 @@ export default function Nutrition() {
                                 <div className="text-right mr-2">
                                   <p className="font-bold text-sm text-white whitespace-nowrap">{log.calories} <span className="text-xs text-slate-500 font-normal">kcal</span></p>
                                 </div>
-                                <button onClick={() => setEditingLog(log)} className="text-slate-500 hover:text-blue-500 transition-colors p-1.5 rounded-lg hover:bg-slate-800"><Pencil className="w-4 h-4" /></button>
+                                <button onClick={() => { setEditingLog(log); setOriginalLog(log); }} className="text-slate-500 hover:text-blue-500 transition-colors p-1.5 rounded-lg hover:bg-slate-800"><Pencil className="w-4 h-4" /></button>
                                 <button onClick={() => deleteLog(log.id)} className="text-slate-500 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-slate-800"><Trash2 className="w-4 h-4" /></button>
                               </div>
                             </div>
