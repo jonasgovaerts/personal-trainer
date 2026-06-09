@@ -1254,7 +1254,7 @@ export default function Nutrition() {
                       <div key={idx} className="flex justify-between items-center group bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-white truncate">{item.name}</p>
-                          <p className="text-[10px] text-slate-500 uppercase font-bold">{item.calories} kcal • {item.protein}g P</p>
+                          <p className="text-[10px] text-slate-500 uppercase font-bold">{item.calories} kcal • {item.protein}g P • {item.carbs}g C • {item.fat}g F</p>
                         </div>
                         <button onClick={() => setStagedItems(stagedItems.filter((_, i) => i !== idx))} className="text-slate-600 hover:text-red-500 transition-colors ml-2"><X className="w-3.5 h-3.5" /></button>
                       </div>
@@ -1263,7 +1263,11 @@ export default function Nutrition() {
                  <div className="p-4 border-t border-slate-800 bg-slate-900">
                     <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-3 uppercase tracking-wider px-1">
                        <span>Total: {stagedItems.reduce((s, i) => s + i.calories, 0)} kcal</span>
-                       <span className="text-blue-500">{stagedItems.reduce((s, i) => s + i.protein, 0)}g P</span>
+                       <div className="flex gap-2.5">
+                          <span className="text-blue-500">{stagedItems.reduce((s, i) => s + i.protein, 0)}g P</span>
+                          <span className="text-orange-500">{stagedItems.reduce((s, i) => s + i.carbs, 0)}g C</span>
+                          <span className="text-red-500">{stagedItems.reduce((s, i) => s + i.fat, 0)}g F</span>
+                       </div>
                     </div>
                     <button onClick={logMeal} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/20 uppercase tracking-widest text-xs">
                        Log to {selectedMeal}
@@ -1296,8 +1300,10 @@ export default function Nutrition() {
                                 </div>
                                 <div className="min-w-0">
                                   <p className="font-medium text-sm text-white leading-tight truncate">{log.name}</p>
-                                  <div className="flex items-center gap-2 mt-1 text-[10px] uppercase font-bold tracking-wider">
+                                  <div className="flex items-center gap-3 mt-1 text-[10px] uppercase font-bold tracking-wider">
                                     <span className="text-blue-500">{log.protein}g P</span>
+                                    <span className="text-orange-500">{log.carbs}g C</span>
+                                    <span className="text-red-500">{log.fat}g F</span>
                                   </div>
                                 </div>
                               </div>
