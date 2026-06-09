@@ -192,7 +192,17 @@ export default function Nutrition() {
       fetchWorkouts();
     }, 10000);
 
-    return () => clearInterval(interval);
+    const handleRefresh = () => {
+      fetchTodayLogs();
+      fetchMonthLogs();
+      fetchWorkouts();
+    };
+    window.addEventListener('refreshData', handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('refreshData', handleRefresh);
+    };
   }, []);
   
   // Manual Entry State

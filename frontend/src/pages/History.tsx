@@ -53,7 +53,14 @@ export default function History() {
 
     // Auto-refresh every 10 seconds to keep history up to date
     const interval = setInterval(fetchHistory, 10000);
-    return () => clearInterval(interval);
+
+    const handleRefresh = () => fetchHistory();
+    window.addEventListener('refreshData', handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('refreshData', handleRefresh);
+    };
   }, []);
 
   const handleDelete = (e: React.MouseEvent, id: number) => {
