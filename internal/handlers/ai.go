@@ -349,6 +349,22 @@ func getUserProgressContext() string {
 	}
 	remainingCals := user.GoalCalories - netConsumed
 
+	// Construct detailed list of today's logged foods
+	var foodList strings.Builder
+	if len(logs) > 0 {
+		foodList.WriteString("\nHere is a list of foods the user has logged today:\n")
+		for _, l := range logs {
+			mealName := "Snack"
+			if l.Meal != "" {
+				mealName = l.Meal
+			}
+			fmt.Fprintf(&foodList, "- [%s] %s: %d kcal (P: %.1fg, C: %.1fg, F: %.1fg)\n", 
+				strings.ToUpper(mealName[:1])+mealName[1:], l.Name, l.Calories, l.Protein, l.Carbs, l.Fat)
+		}
+	} else {
+		foodList.WriteString("\nThe user has not logged any foods yet today.\n")
+	}
+
 	return fmt.Sprintf(
 		"Today's Date: %s. Here is the user's current daily progress:\n"+
 			"- Calorie Goal: %d kcal\n"+
@@ -358,7 +374,8 @@ func getUserProgressContext() string {
 			"- Calories Remaining: %d kcal\n"+
 			"- Protein: %.1f g consumed / %d g goal (Remaining: %.1f g)\n"+
 			"- Carbs: %.1f g consumed / %d g goal (Remaining: %.1f g)\n"+
-			"- Fat: %.1f g consumed / %d g goal (Remaining: %.1f g)\n\n"+
+			"- Fat: %.1f g consumed / %d g goal (Remaining: %.1f g)\n"+
+			"%s\n\n"+
 			"Use this data to answer questions about their daily limits, consumed food, remaining targets, and general nutrition.",
 		today,
 		user.GoalCalories,
@@ -369,6 +386,7 @@ func getUserProgressContext() string {
 		consumedProtein, user.GoalProtein, float64(user.GoalProtein)-consumedProtein,
 		consumedCarbs, user.GoalCarbs, float64(user.GoalCarbs)-consumedCarbs,
 		consumedFat, user.GoalFat, float64(user.GoalFat)-consumedFat,
+		foodList.String(),
 	)
 }
 
