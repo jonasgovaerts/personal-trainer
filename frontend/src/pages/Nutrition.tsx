@@ -184,6 +184,15 @@ export default function Nutrition() {
     fetchTodayLogs();
     fetchMonthLogs();
     fetchWorkouts();
+
+    // Auto-refresh every 10 seconds to keep stats and lists up to date
+    const interval = setInterval(() => {
+      fetchTodayLogs();
+      fetchMonthLogs();
+      fetchWorkouts();
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
   
   // Manual Entry State

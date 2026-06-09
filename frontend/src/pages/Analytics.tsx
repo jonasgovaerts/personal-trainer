@@ -26,7 +26,7 @@ export default function Analytics() {
   const [history, setHistory] = useState<any[]>([]);
   const [timeRange, setTimeRange] = useState('7d');
 
-  useEffect(() => {
+  const fetchAnalyticsData = () => {
     fetch('/api/workouts/history?user_id=1')
       .then(res => res.json())
       .then(data => {
@@ -35,6 +35,14 @@ export default function Analytics() {
       .catch(err => {
         console.error("Failed to fetch history:", err);
       });
+  };
+
+  useEffect(() => {
+    fetchAnalyticsData();
+
+    // Auto-refresh every 10 seconds to keep charts up to date
+    const interval = setInterval(fetchAnalyticsData, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   // 1. Calculate Volume Chart Data (Last 7 Days)

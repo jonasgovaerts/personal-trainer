@@ -50,6 +50,10 @@ export default function History() {
 
   useEffect(() => {
     fetchHistory();
+
+    // Auto-refresh every 10 seconds to keep history up to date
+    const interval = setInterval(fetchHistory, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleDelete = (e: React.MouseEvent, id: number) => {

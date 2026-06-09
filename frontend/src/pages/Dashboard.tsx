@@ -107,20 +107,28 @@ export default function Dashboard() {
       const carbsGoal = user?.goal_carbs || 250;
       const fatGoal = user?.goal_fat || 80;
 
-      useEffect(() => {
-      Promise.all([
+  const fetchDashboardData = () => {
+    Promise.all([
       fetch(`/api/workouts/history?user_id=1&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()),
       fetch(`/api/nutrition?user_id=1&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json())
-      ])
-      .then(([workoutsData, nutritionData]) => {
+    ])
+    .then(([workoutsData, nutritionData]) => {
       setHistory(Array.isArray(workoutsData) ? workoutsData : []);
       setNutritionLogs(Array.isArray(nutritionData) ? nutritionData : []);
       setLoading(false);
-      })
+    })
     .catch(err => {
       console.error("Failed to fetch dashboard data:", err);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+
+    // Auto-refresh every 10 seconds to keep stats up to date
+    const interval = setInterval(fetchDashboardData, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
