@@ -140,7 +140,15 @@ func GetFoodByBarcode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := "https://world.openfoodfacts.org/api/v0/product/" + barcode + ".json"
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to create request")
+		return
+	}
+	req.Header.Set("User-Agent", "PersonalTrainerApp - Go - Version 1.0")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to reach Open Food Facts")
 		return
@@ -202,7 +210,15 @@ func SearchFood(w http.ResponseWriter, r *http.Request) {
 	params.Add("page_size", "20")
 
 	apiURL := "https://world.openfoodfacts.org/cgi/search.pl?" + params.Encode()
-	resp, err := http.Get(apiURL)
+	req, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to create request")
+		return
+	}
+	req.Header.Set("User-Agent", "PersonalTrainerApp - Go - Version 1.0")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to reach Open Food Facts")
 		return

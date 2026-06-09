@@ -801,7 +801,7 @@ export default function Nutrition() {
                     onClick={() => setActiveTab('ai')}
                     className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 px-3 rounded-lg text-xs lg:text-sm font-semibold transition-all whitespace-nowrap", activeTab === 'ai' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
                   >
-                    <Camera className="w-3.5 h-3.5" /> AI Cam
+                    <Camera className="w-3.5 h-3.5" /> {t('nutrition.tab.camera') || "AI"}
                   </button>
                   <button
                     onClick={() => setActiveTab('manual')}
