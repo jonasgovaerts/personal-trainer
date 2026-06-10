@@ -153,7 +153,7 @@ export default function Nutrition() {
 
   // Fetch month's logs
   const fetchMonthLogs = () => {
-    fetch(`/api/nutrition?user_id=1&days=31&_t=${Date.now()}`, { cache: 'no-store' })
+    fetch(`/api/nutrition?user_id=me&days=31&_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data && Array.isArray(data)) {
@@ -176,7 +176,7 @@ export default function Nutrition() {
   };
 
   const fetchWorkouts = () => {
-    fetch(`/api/workouts/history?user_id=1&_t=${Date.now()}`, { cache: 'no-store' })
+    fetch(`/api/workouts/history?user_id=me&_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         setWorkouts(Array.isArray(data) ? data : []);

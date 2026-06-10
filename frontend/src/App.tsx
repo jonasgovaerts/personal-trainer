@@ -19,7 +19,17 @@ function AppContent() {
 
   useEffect(() => {
     if (!loading) {
-      if (!user || !user.name || !user.gender || user.current_weight === 0) {
+      const forceSetup = localStorage.getItem('force_setup') === 'true';
+      const isUserCompleteInDB = !!(user && user.name && user.gender && user.current_weight !== 0);
+
+      // If already onboarded in the database, automatically sync localStorage (unless forcing setup)
+      if (isUserCompleteInDB && !forceSetup) {
+        localStorage.setItem('setup_complete', 'true');
+      }
+
+      const isSetupCompleteInStorage = localStorage.getItem('setup_complete') === 'true';
+
+      if (!isUserCompleteInDB || !isSetupCompleteInStorage || forceSetup) {
         setShowSetup(true);
       } else {
         setShowSetup(false);
@@ -32,7 +42,11 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans relative">
       {showSetup && (
-        <SetupWizard onComplete={() => { setShowSetup(false); refreshUser(); }} />
+        <SetupWizard onComplete={() => { 
+          localStorage.removeItem('force_setup');
+          setShowSetup(false); 
+          refreshUser(); 
+        }} />
       )}
       <Routes>
         <Route path="/" element={<Dashboard />} />

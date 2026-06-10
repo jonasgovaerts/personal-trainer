@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Check, Dumbbell } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useUser } from '../contexts/UserContext';
 
 interface SetupWizardProps {
   onComplete: () => void;
@@ -9,6 +10,7 @@ interface SetupWizardProps {
 
 export default function SetupWizard({ onComplete }: SetupWizardProps) {
   const { t } = useTranslation();
+  const { user } = useUser();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: '',
@@ -23,6 +25,23 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
   const [allEquipment, setAllEquipment] = useState<any[]>([]);
   const [userEquipmentIds, setUserEquipmentIds] = useState<number[]>([]);
   const [savingEq, setSavingEq] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        gender: user.gender || 'male',
+        birthDate: user.birth_date || '',
+        height: user.height ? user.height.toString() : '',
+        currentWeight: user.current_weight ? user.current_weight.toString() : '',
+        targetWeight: user.target_weight ? user.target_weight.toString() : '',
+        activityLevel: user.activity_level || '1.375'
+      });
+      if (user.equipment) {
+        setUserEquipmentIds(user.equipment.map((e: any) => e.id));
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     fetch('/api/equipment')
@@ -114,7 +133,7 @@ export default function SetupWizard({ onComplete }: SetupWizardProps) {
       });
 
       // Save equipment
-      await fetch('/api/user/1/equipment', {
+      await fetch('/api/user/me/equipment', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ equipment_ids: userEquipmentIds })

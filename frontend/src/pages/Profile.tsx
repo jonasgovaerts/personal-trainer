@@ -42,7 +42,7 @@ export default function Profile() {
     // Fetch equipment data
     Promise.all([
       fetch('/api/equipment').then(res => res.json()),
-      fetch('/api/user/1').then(res => res.json())
+      fetch('/api/user/me').then(res => res.json())
     ])
     .then(([eqData, userData]) => {
       setAllEquipment(eqData || []);
@@ -59,6 +59,7 @@ export default function Profile() {
 
   const handleRetakeWizard = () => {
     localStorage.removeItem('setup_complete');
+    localStorage.setItem('force_setup', 'true');
     window.location.href = '/';
   };
 

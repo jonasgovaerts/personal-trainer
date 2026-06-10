@@ -118,7 +118,7 @@ export default function Dashboard() {
     const carbs = Math.max(0, Math.round(remainingCals / 4));
 
     try {
-      await fetch('/api/user/1/profile', {
+      await fetch('/api/user/me/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
