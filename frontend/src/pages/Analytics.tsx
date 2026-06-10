@@ -318,20 +318,6 @@ export default function Analytics() {
                 View All PRs
               </button>
             </div>
-
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-5 lg:p-6 rounded-2xl shadow-lg text-white">
-              <h4 className="font-bold text-lg mb-2">Keep it up!</h4>
-              <p className="text-blue-100 text-xs lg:text-sm leading-relaxed mb-4">
-                Total volume +12% vs last week. Most improved: <strong>Bulgarian Split Squats</strong>.
-              </p>
-              <div className="bg-white/10 backdrop-blur-sm p-3 rounded-xl">
-                <p className="text-[10px] uppercase font-bold text-blue-200 mb-1">Upcoming Milestone</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs lg:text-sm font-bold">1,000kg Total Lifted</span>
-                  <span className="text-[10px]">850/1000</span>
-                </div>
-              </div>
-            </div>
           </div>
 
         </div>
