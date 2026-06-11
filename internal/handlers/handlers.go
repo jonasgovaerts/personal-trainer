@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/user/personal-trainer/internal/db"
@@ -33,14 +32,6 @@ func respondError(w http.ResponseWriter, code int, message string) {
 
 // GetCurrentUser retrieves the logged-in user from Authentik headers or defaults to ID 1 in development
 func GetCurrentUser(r *http.Request) models.User {
-	// Log incoming headers starting with X-, Remote-, or Auth- to diagnose Authentik configuration
-	for k, v := range r.Header {
-		lowerK := strings.ToLower(k)
-		if strings.HasPrefix(lowerK, "x-") || strings.HasPrefix(lowerK, "remote") || strings.HasPrefix(lowerK, "auth") {
-			log.Printf("DEBUG HEADER: %s = %v", k, v)
-		}
-	}
-
 	username := r.Header.Get("X-Authentik-Username")
 	name := r.Header.Get("X-Authentik-Name")
 	if name == "" {
@@ -48,7 +39,6 @@ func GetCurrentUser(r *http.Request) models.User {
 	}
 
 	if username == "" {
-		log.Println("DEBUG: No Authentik username header found, falling back to local Dev User")
 		// Fallback to user ID 1 in development
 		var user models.User
 		if err := db.DB.Preload("Equipment").First(&user, 1).Error; err != nil {
@@ -70,7 +60,7 @@ func GetCurrentUser(r *http.Request) models.User {
 
 	var user models.User
 	if err := db.DB.Preload("Equipment").Where("username = ?", username).First(&user).Error; err != nil {
-		log.Printf("DEBUG: Authentik forwarded NEW user '%s' (%s). Auto-provisioning in database.", username, name)
+		log.Printf("Auto-provisioning new user '%s' (%s)", username, name)
 		// Auto-provision user on first login
 		user = models.User{
 			Username:       username,
@@ -82,8 +72,6 @@ func GetCurrentUser(r *http.Request) models.User {
 			HockeyPosition: "Aanvaller",
 		}
 		db.DB.Create(&user)
-	} else {
-		log.Printf("DEBUG: Authentik forwarded active user '%s' (%s)", username, name)
 	}
 	return user
 }
