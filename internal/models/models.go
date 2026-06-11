@@ -82,6 +82,30 @@ type NutritionLog struct {
 	Timestamp    time.Time `json:"timestamp" gorm:"default:CURRENT_TIMESTAMP"`
 }
 
+// Meal represents a reusable meal composed of multiple food items.
+type Meal struct {
+	ID        uint       `json:"id" gorm:"primarykey"`
+	UserID    uint       `json:"user_id" gorm:"index"`
+	Name      string     `json:"name" gorm:"not null;size:100"`
+	Items     []MealItem `json:"items" gorm:"foreignKey:MealID;constraint:OnDelete:CASCADE"`
+	CreatedAt time.Time  `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
+}
+
+// MealItem is a single food item within a saved Meal, with values for the stored portion.
+type MealItem struct {
+	ID           uint    `json:"id" gorm:"primarykey"`
+	MealID       uint    `json:"meal_id" gorm:"index"`
+	Barcode      string  `json:"barcode" gorm:"size:100"`
+	Name         string  `json:"name" gorm:"not null"`
+	Calories     int     `json:"calories"`
+	Protein      float64 `json:"protein"`
+	Carbs        float64 `json:"carbs"`
+	Fat          float64 `json:"fat"`
+	Fiber        float64 `json:"fiber"`
+	PortionGrams float64 `json:"portion_grams"`
+	Type         string  `json:"type" gorm:"size:20"` // 'food' or 'drink'
+}
+
 // BodyMeasurement represents a snapshot of the user's body measurements in cm (weight in kg).
 type BodyMeasurement struct {
 	ID        uint      `json:"id" gorm:"primarykey"`

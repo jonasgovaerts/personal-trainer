@@ -8,6 +8,7 @@ import PredefinedWorkouts from './pages/PredefinedWorkouts'
 import ActiveWorkout from './pages/ActiveWorkout'
 import History from './pages/History'
 import Nutrition from './pages/Nutrition'
+import Meals from './pages/Meals'
 import Profile from './pages/Profile'
 import SetupWizard from './components/SetupWizard'
 import { UIProvider } from './contexts/UIContext'
@@ -57,6 +58,7 @@ function AppContent() {
         <Route path="/plans" element={<PredefinedWorkouts />} />
         <Route path="/active-workout" element={<ActiveWorkout />} />
         <Route path="/nutrition" element={<Nutrition />} />
+        <Route path="/meals" element={<Meals />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
     </div>

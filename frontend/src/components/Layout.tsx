@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
   Activity, CalendarDays, TrendingUp, Search, 
-  Settings, Dumbbell, FilePlus, User, Globe, ClipboardList, Apple, Menu, X, Plus,
+  Settings, Dumbbell, FilePlus, User, Globe, ClipboardList, Apple, Menu, X, Plus, Utensils,
   Sparkles, Trash2, Loader2, FileText, Paperclip, Send
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -125,6 +125,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <NavItem to="/history" icon={<CalendarDays />} label={t('nav.history')} />
           <NavItem to="/analytics" icon={<TrendingUp />} label={t('nav.progress')} />
           <NavItem to="/nutrition" icon={<Apple />} label={t('nav.nutrition')} />
+          <NavItem to="/meals" icon={<Utensils />} label={t('nav.meals') || 'Meals'} />
           <div className="pt-6 pb-2">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">{t('nav.training')}</p>
           </div>
@@ -291,7 +292,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <NavItem to="/history" icon={<CalendarDays />} label={t('nav.history')} onClick={() => setIsMobileMobileMenuOpen(false)} />
               <NavItem to="/analytics" icon={<TrendingUp />} label={t('nav.progress')} onClick={() => setIsMobileMobileMenuOpen(false)} />
               <NavItem to="/nutrition" icon={<Apple />} label={t('nav.nutrition')} onClick={() => setIsMobileMobileMenuOpen(false)} />
-              
+              <NavItem to="/meals" icon={<Utensils />} label={t('nav.meals') || 'Meals'} onClick={() => setIsMobileMobileMenuOpen(false)} />
+
               <div className="pt-6 pb-2 px-2">
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('nav.training')}</p>
               </div>

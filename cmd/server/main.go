@@ -42,6 +42,11 @@ func main() {
 	mux.HandleFunc("GET /api/nutrition/barcode", handlers.GetFoodByBarcode)
 	mux.HandleFunc("POST /api/ai/chat", handlers.ChatWithAI)
 
+	mux.HandleFunc("GET /api/meals", handlers.GetMeals)
+	mux.HandleFunc("POST /api/meals", handlers.CreateMeal)
+	mux.HandleFunc("PUT /api/meals/{id}", handlers.UpdateMeal)
+	mux.HandleFunc("DELETE /api/meals/{id}", handlers.DeleteMeal)
+
 	mux.HandleFunc("GET /api/measurements", handlers.GetBodyMeasurements)
 	mux.HandleFunc("POST /api/measurements", handlers.LogBodyMeasurement)
 	mux.HandleFunc("DELETE /api/measurements/{id}", handlers.DeleteBodyMeasurement)

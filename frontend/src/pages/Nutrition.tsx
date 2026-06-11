@@ -108,7 +108,9 @@ export default function Nutrition() {
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [historyLogs, setHistoryLogs] = useState<LogItem[]>([]);
   const [workouts, setWorkouts] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'manual' | 'ai' | 'barcode' | 'search'>('search');
+  const [savedMeals, setSavedMeals] = useState<any[]>([]);
+  const [loggingMealId, setLoggingMealId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'manual' | 'ai' | 'barcode' | 'search' | 'meals'>('search');
   const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(getDefaultMealForTime());
   const [viewMode, setViewMode] = useState<'today' | 'month'>('today');
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -180,6 +182,13 @@ export default function Nutrition() {
       .catch(err => console.error("Failed to fetch history nutrition logs:", err));
   };
 
+  const fetchSavedMeals = () => {
+    fetch('/api/meals')
+      .then(res => res.json())
+      .then(data => setSavedMeals(Array.isArray(data) ? data : []))
+      .catch(err => console.error("Failed to fetch saved meals:", err));
+  };
+
   const fetchWorkouts = () => {
     fetch(`/api/workouts/history?user_id=me&_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
@@ -193,6 +202,7 @@ export default function Nutrition() {
     fetchTodayLogs();
     fetchMonthLogs();
     fetchWorkouts();
+    fetchSavedMeals();
 
     // Auto-refresh every 10 seconds to keep stats and lists up to date
     const interval = setInterval(() => {
@@ -408,8 +418,8 @@ export default function Nutrition() {
         portionGrams: savedItem.portion_grams
       };
       
-      setLogs([newItem, ...logs]);
-      setHistoryLogs([newItem, ...historyLogs]);
+      setLogs(prev => [newItem, ...prev]);
+      setHistoryLogs(prev => [newItem, ...prev]);
     } catch (err) {
       console.error(err);
       toast('Failed to save nutrition log.', 'error');
@@ -432,6 +442,19 @@ export default function Nutrition() {
       setStagedItems([]);
       toast('Meal logged successfully!', 'success');
     });
+  };
+
+  const logSavedMeal = async (meal: any) => {
+    if (!meal.items || meal.items.length === 0 || loggingMealId) return;
+    setLoggingMealId(meal.id);
+    try {
+      for (const item of meal.items) {
+        await addLog(item.name, item.calories, item.protein, item.carbs, item.fat, item.fiber || 0, item.type || 'food', item.barcode, item.portion_grams);
+      }
+      toast(`${meal.name} logged to ${selectedMeal}!`, 'success');
+    } finally {
+      setLoggingMealId(null);
+    }
   };
 
   const deleteLog = async (id: string) => {
@@ -889,6 +912,12 @@ export default function Nutrition() {
                     <SearchIcon className="w-3.5 h-3.5" /> Search
                   </button>
                   <button
+                    onClick={() => setActiveTab('meals')}
+                    className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 px-3 rounded-lg text-xs lg:text-sm font-semibold transition-all whitespace-nowrap", activeTab === 'meals' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
+                  >
+                    <Utensils className="w-3.5 h-3.5" /> Meals
+                  </button>
+                  <button
                     onClick={() => setActiveTab('barcode')}
                     className={cn("flex-1 flex items-center justify-center gap-1.5 lg:gap-2 py-2 px-3 rounded-lg text-xs lg:text-sm font-semibold transition-all whitespace-nowrap", activeTab === 'barcode' ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-300")}
                   >
@@ -1015,6 +1044,55 @@ export default function Nutrition() {
                           ))
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'meals' && (
+                    <div className="space-y-3">
+                      {savedMeals.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center text-center p-8 bg-slate-950/50 border border-dashed border-slate-700 rounded-xl">
+                          <Utensils className="w-10 h-10 text-slate-700 mb-3" />
+                          <p className="text-slate-400 text-sm mb-4">No saved meals yet. Build reusable meals once and log them here in one tap.</p>
+                          <a href="/meals" className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded-xl transition-colors text-sm">
+                            Open Meal Builder
+                          </a>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                            {savedMeals.map(meal => {
+                              const totalCals = meal.items?.reduce((s: number, i: any) => s + i.calories, 0) || 0;
+                              const totalP = Number((meal.items?.reduce((s: number, i: any) => s + i.protein, 0) || 0).toFixed(1));
+                              return (
+                                <div key={meal.id} className="bg-slate-950/50 border border-slate-800 rounded-xl p-3 flex items-center justify-between group hover:border-slate-700 transition-colors">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                                      <Utensils className="w-5 h-5 text-blue-500" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-bold text-white truncate">{meal.name}</p>
+                                      <p className="text-[10px] text-slate-500 uppercase font-bold truncate">
+                                        {meal.items?.length || 0} items • {totalCals} kcal • {totalP}g P
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => logSavedMeal(meal)}
+                                    disabled={loggingMealId !== null}
+                                    className="bg-slate-800 p-2 rounded-lg text-blue-500 hover:bg-blue-600 hover:text-white disabled:opacity-50 transition-all ml-4 shrink-0"
+                                    title={`Log to ${selectedMeal}`}
+                                  >
+                                    {loggingMealId === meal.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <a href="/meals" className="block text-center text-xs font-bold text-blue-500 hover:text-blue-400 uppercase tracking-wider py-2">
+                            Manage meals →
+                          </a>
+                        </>
+                      )}
                     </div>
                   )}
 
