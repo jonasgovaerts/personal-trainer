@@ -22,6 +22,7 @@ interface LogItem {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
   type: 'food' | 'drink';
   meal: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   timestamp: Date;
@@ -35,6 +36,7 @@ interface StagedItem {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
   portionGrams?: number;
   type?: 'food' | 'drink';
   brand?: string;
@@ -47,39 +49,40 @@ interface SuggestionItem {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
   type: 'food' | 'drink';
   brand?: string;
 }
 
 const MEAL_SUGGESTIONS: Record<'breakfast' | 'lunch' | 'dinner' | 'snack', SuggestionItem[]> = {
   breakfast: [
-    { name: 'Oatmeal with Honey & Milk', calories: 120, protein: 4.2, carbs: 21, fat: 2.5, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Scrambled Eggs (2 large)', calories: 143, protein: 12.6, carbs: 0.8, fat: 9.5, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Whole Wheat Toast (2 slices)', calories: 240, protein: 9.0, carbs: 46.0, fat: 2.0, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Greek Yogurt (Plain, Low Fat)', calories: 73, protein: 10.0, carbs: 3.6, fat: 2.0, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Banana (1 medium)', calories: 89, protein: 1.1, carbs: 22.8, fat: 0.3, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Whey Protein Shake (1 scoop)', calories: 120, protein: 24.0, carbs: 3.0, fat: 1.5, type: 'drink', brand: 'Popular Suggestion' }
+    { name: 'Oatmeal with Honey & Milk', calories: 120, protein: 4.2, carbs: 21, fat: 2.5, fiber: 2.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Scrambled Eggs (2 large)', calories: 143, protein: 12.6, carbs: 0.8, fat: 9.5, fiber: 0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Whole Wheat Toast (2 slices)', calories: 240, protein: 9.0, carbs: 46.0, fat: 2.0, fiber: 4.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Greek Yogurt (Plain, Low Fat)', calories: 73, protein: 10.0, carbs: 3.6, fat: 2.0, fiber: 0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Banana (1 medium)', calories: 89, protein: 1.1, carbs: 22.8, fat: 0.3, fiber: 2.6, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Whey Protein Shake (1 scoop)', calories: 120, protein: 24.0, carbs: 3.0, fat: 1.5, fiber: 0, type: 'drink', brand: 'Popular Suggestion' }
   ],
   lunch: [
-    { name: 'Grilled Chicken Breast', calories: 165, protein: 31.0, carbs: 0.0, fat: 3.6, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'White Rice (Cooked)', calories: 130, protein: 2.7, carbs: 28.0, fat: 0.3, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Turkey & Cheese Sandwich', calories: 320, protein: 18.0, carbs: 34.0, fat: 12.0, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Mixed Greens Salad (with Olive Oil)', calories: 110, protein: 1.0, carbs: 4.0, fat: 10.0, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Canned Tuna (in water)', calories: 116, protein: 26.0, carbs: 0.0, fat: 1.0, type: 'food', brand: 'Popular Suggestion' }
+    { name: 'Grilled Chicken Breast', calories: 165, protein: 31.0, carbs: 0.0, fat: 3.6, fiber: 0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'White Rice (Cooked)', calories: 130, protein: 2.7, carbs: 28.0, fat: 0.3, fiber: 0.4, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Turkey & Cheese Sandwich', calories: 320, protein: 18.0, carbs: 34.0, fat: 12.0, fiber: 2.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Mixed Greens Salad (with Olive Oil)', calories: 110, protein: 1.0, carbs: 4.0, fat: 10.0, fiber: 1.5, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Canned Tuna (in water)', calories: 116, protein: 26.0, carbs: 0.0, fat: 1.0, fiber: 0, type: 'food', brand: 'Popular Suggestion' }
   ],
   dinner: [
-    { name: 'Baked Salmon Fillet', calories: 206, protein: 22.0, carbs: 0.0, fat: 12.0, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Steamed Broccoli', calories: 34, protein: 2.8, carbs: 7.0, fat: 0.4, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Beef Sirloin Steak', calories: 244, protein: 24.0, carbs: 0.0, fat: 16.0, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Baked Sweet Potato', calories: 86, protein: 1.6, carbs: 20.0, fat: 0.1, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Brown Rice (Cooked)', calories: 111, protein: 2.6, carbs: 23.0, fat: 0.9, type: 'food', brand: 'Popular Suggestion' }
+    { name: 'Baked Salmon Fillet', calories: 206, protein: 22.0, carbs: 0.0, fat: 12.0, fiber: 0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Steamed Broccoli', calories: 34, protein: 2.8, carbs: 7.0, fat: 0.4, fiber: 2.6, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Beef Sirloin Steak', calories: 244, protein: 24.0, carbs: 0.0, fat: 16.0, fiber: 0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Baked Sweet Potato', calories: 86, protein: 1.6, carbs: 20.0, fat: 0.1, fiber: 3.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Brown Rice (Cooked)', calories: 111, protein: 2.6, carbs: 23.0, fat: 0.9, fiber: 1.8, type: 'food', brand: 'Popular Suggestion' }
   ],
   snack: [
-    { name: 'Almonds (Handful, 28g)', calories: 580, protein: 21.0, carbs: 22.0, fat: 49.0, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Apple (with 1 tbsp Peanut Butter)', calories: 190, protein: 4.5, carbs: 25.0, fat: 8.5, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Rice Cakes (2 plain)', calories: 70, protein: 1.5, carbs: 15.0, fat: 0.6, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Dark Chocolate (70% Cocoa, 30g)', calories: 170, protein: 2.0, carbs: 13.0, fat: 12.0, type: 'food', brand: 'Popular Suggestion' },
-    { name: 'Cottage Cheese (Low Fat)', calories: 82, protein: 11.0, carbs: 3.4, fat: 2.3, type: 'food', brand: 'Popular Suggestion' }
+    { name: 'Almonds (Handful, 28g)', calories: 580, protein: 21.0, carbs: 22.0, fat: 49.0, fiber: 12.5, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Apple (with 1 tbsp Peanut Butter)', calories: 190, protein: 4.5, carbs: 25.0, fat: 8.5, fiber: 3.5, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Rice Cakes (2 plain)', calories: 70, protein: 1.5, carbs: 15.0, fat: 0.6, fiber: 0.4, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Dark Chocolate (70% Cocoa, 30g)', calories: 170, protein: 2.0, carbs: 13.0, fat: 12.0, fiber: 3.0, type: 'food', brand: 'Popular Suggestion' },
+    { name: 'Cottage Cheese (Low Fat)', calories: 82, protein: 11.0, carbs: 3.4, fat: 2.3, fiber: 0, type: 'food', brand: 'Popular Suggestion' }
   ]
 };
 
@@ -140,6 +143,7 @@ export default function Nutrition() {
             protein: item.protein || 0,
             carbs: item.carbs || 0,
             fat: item.fat || 0,
+            fiber: item.fiber || 0,
             type: item.type as 'food' | 'drink',
             meal: item.meal as 'breakfast' | 'lunch' | 'dinner' | 'snack',
             timestamp: new Date(item.timestamp),
@@ -164,6 +168,7 @@ export default function Nutrition() {
             protein: item.protein || 0,
             carbs: item.carbs || 0,
             fat: item.fat || 0,
+            fiber: item.fiber || 0,
             type: item.type as 'food' | 'drink',
             meal: item.meal as 'breakfast' | 'lunch' | 'dinner' | 'snack',
             timestamp: new Date(item.timestamp),
@@ -215,6 +220,7 @@ export default function Nutrition() {
   const [manualP, setManualP] = useState('');
   const [manualC, setManualC] = useState('');
   const [manualF, setManualF] = useState('');
+  const [manualFiber, setManualFiber] = useState('');
   const [manualType, setManualType] = useState<'food' | 'drink'>('food');
 
   // Search State
@@ -246,6 +252,7 @@ export default function Nutrition() {
   const consumedP = Number(logs.reduce((sum, item) => sum + item.protein, 0).toFixed(2));
   const consumedC = Number(logs.reduce((sum, item) => sum + item.carbs, 0).toFixed(2));
   const consumedF = Number(logs.reduce((sum, item) => sum + item.fat, 0).toFixed(2));
+  const consumedFiber = Number(logs.reduce((sum, item) => sum + item.fiber, 0).toFixed(2));
 
   const netConsumed = Math.max(0, consumed - burnedCals);
   const remaining = goal - netConsumed;
@@ -259,7 +266,7 @@ export default function Nutrition() {
   const waterProgress = Math.min(100, (loggedWater / waterTarget) * 100);
 
   const logWater = (amount: number) => {
-    addLog('Water', 0, 0, 0, 0, 'drink', undefined, amount);
+    addLog('Water', 0, 0, 0, 0, 0, 'drink', undefined, amount);
   };
 
   // Personalized Suggestions based on past history (excluding water)
@@ -283,6 +290,7 @@ export default function Nutrition() {
         protein: item.log.protein,
         carbs: item.log.carbs,
         fat: item.log.fat,
+        fiber: item.log.fiber,
         type: item.log.type,
         brand: 'Frequently Logged'
       }));
@@ -361,7 +369,7 @@ export default function Nutrition() {
     };
   }, [cameraStream]);
 
-  const addLog = async (name: string, calories: number, protein: number, carbs: number, fat: number, type: 'food' | 'drink' = 'food', barcode?: string, portionGrams?: number) => {
+  const addLog = async (name: string, calories: number, protein: number, carbs: number, fat: number, fiber: number, type: 'food' | 'drink' = 'food', barcode?: string, portionGrams?: number) => {
     try {
       const res = await fetch('/api/nutrition', {
         method: 'POST',
@@ -374,6 +382,7 @@ export default function Nutrition() {
           protein,
           carbs,
           fat,
+          fiber,
           portion_grams: portionGrams,
           type,
           meal: selectedMeal
@@ -381,9 +390,9 @@ export default function Nutrition() {
       });
 
       if (!res.ok) throw new Error('Failed to save log to database');
-      
+
       const savedItem = await res.json();
-      
+
       const newItem: LogItem = {
         id: savedItem.id.toString(),
         barcode: savedItem.barcode,
@@ -392,6 +401,7 @@ export default function Nutrition() {
         protein: savedItem.protein || 0,
         carbs: savedItem.carbs || 0,
         fat: savedItem.fat || 0,
+        fiber: savedItem.fiber || 0,
         type: itemType(type),
         meal: itemMeal(selectedMeal),
         timestamp: new Date(savedItem.timestamp),
@@ -417,7 +427,7 @@ export default function Nutrition() {
     
     confirm(`Log all ${stagedItems.length} items to ${selectedMeal}?`, async () => {
       for (const item of stagedItems) {
-        await addLog(item.name, item.calories, item.protein, item.carbs, item.fat, item.type || 'food', item.barcode, item.portionGrams);
+        await addLog(item.name, item.calories, item.protein, item.carbs, item.fat, item.fiber, item.type || 'food', item.barcode, item.portionGrams);
       }
       setStagedItems([]);
       toast('Meal logged successfully!', 'success');
@@ -456,6 +466,7 @@ export default function Nutrition() {
           protein: updated.protein,
           carbs: updated.carbs,
           fat: updated.fat,
+          fiber: updated.fiber,
           portion_grams: updated.portionGrams,
           type: updated.type,
           meal: updated.meal,
@@ -474,6 +485,7 @@ export default function Nutrition() {
         protein: savedItem.protein || 0,
         carbs: savedItem.carbs || 0,
         fat: savedItem.fat || 0,
+        fiber: savedItem.fiber || 0,
         type: itemType(savedItem.type),
         meal: itemMeal(savedItem.meal),
         timestamp: new Date(savedItem.timestamp),
@@ -492,12 +504,13 @@ export default function Nutrition() {
 
   const handleManualAdd = () => {
     if (!manualName || !manualCal) return;
-    addLog(manualName, parseInt(manualCal, 10), parseFloat(manualP) || 0, parseFloat(manualC) || 0, parseFloat(manualF) || 0, manualType);
+    addLog(manualName, parseInt(manualCal, 10), parseFloat(manualP) || 0, parseFloat(manualC) || 0, parseFloat(manualF) || 0, parseFloat(manualFiber) || 0, manualType);
     setManualName('');
     setManualCal('');
     setManualP('');
     setManualC('');
     setManualF('');
+    setManualFiber('');
     toast(`${manualName} logged!`, 'success');
   };
 
@@ -534,6 +547,7 @@ export default function Nutrition() {
         protein: Number(data.protein) || 0,
         carbs: Number(data.carbs) || 0,
         fat: Number(data.fat) || 0,
+        fiber: Number(data.fiber) || 0,
         brand: data.brand,
         image: data.image
       };
@@ -556,6 +570,7 @@ export default function Nutrition() {
       protein: Number(item.protein) || 0,
       carbs: Number(item.carbs) || 0,
       fat: Number(item.fat) || 0,
+      fiber: Number(item.fiber) || 0,
       type: item.type || 'food',
       brand: item.brand,
       image: item.image
@@ -576,6 +591,7 @@ export default function Nutrition() {
       protein: Number((verificationItem.protein * factor).toFixed(2)),
       carbs: Number((verificationItem.carbs * factor).toFixed(2)),
       fat: Number((verificationItem.fat * factor).toFixed(2)),
+      fiber: Number((verificationItem.fiber * factor).toFixed(2)),
       portionGrams: grams
     };
 
@@ -583,7 +599,7 @@ export default function Nutrition() {
       setStagedItems([...stagedItems, finalItem]);
       toast(`Added ${finalItem.name} to meal builder`, 'info');
     } else {
-      addLog(finalItem.name, finalItem.calories, finalItem.protein, finalItem.carbs, finalItem.fat, finalItem.type || 'food', finalItem.barcode, grams);
+      addLog(finalItem.name, finalItem.calories, finalItem.protein, finalItem.carbs, finalItem.fat, finalItem.fiber, finalItem.type || 'food', finalItem.barcode, grams);
       toast(`${finalItem.name} logged!`, 'success');
     }
 
@@ -621,12 +637,13 @@ export default function Nutrition() {
 
       const data = await res.json();
       
-      triggerVerification({ 
-        name: data.name || 'Unknown Item', 
-        calories: data.calories, 
-        protein: data.protein, 
-        carbs: data.carbs, 
+      triggerVerification({
+        name: data.name || 'Unknown Item',
+        calories: data.calories,
+        protein: data.protein,
+        carbs: data.carbs,
         fat: data.fat,
+        fiber: data.fiber || 0,
         type: data.type || 'food'
       });
       toast('Analysis complete! Please verify.', 'success');
@@ -775,7 +792,7 @@ export default function Nutrition() {
                   )}
 
                   {/* Macros Section */}
-                  <div className="mt-8 w-full grid grid-cols-3 lg:grid-cols-1 gap-2 lg:gap-4 px-1 lg:px-2">
+                  <div className="mt-8 w-full grid grid-cols-2 lg:grid-cols-1 gap-2 lg:gap-4 px-1 lg:px-2">
                     <div className="text-center lg:text-left">
                       <div className="flex flex-col lg:flex-row lg:justify-between text-[9px] lg:text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
                         <span className="text-blue-500">Prot</span>
@@ -801,6 +818,15 @@ export default function Nutrition() {
                       </div>
                       <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedF / fatGoal) * 100)}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-center lg:text-left">
+                      <div className="flex flex-col lg:flex-row lg:justify-between text-[9px] lg:text-[10px] font-bold uppercase mb-1 gap-0.5 lg:gap-0">
+                        <span className="text-purple-500">Fiber</span>
+                        <span className="text-slate-400 whitespace-nowrap">{consumedFiber}g / 25g</span>
+                      </div>
+                      <div className="h-1.5 lg:h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${Math.min(100, (consumedFiber / 25) * 100)}%` }} />
                       </div>
                     </div>
                   </div>
@@ -1074,11 +1100,11 @@ export default function Nutrition() {
                           />
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-4 gap-4">
                         <div>
                           <label className="text-[10px] lg:text-xs font-bold text-blue-500 uppercase tracking-wider mb-1 block">Prot (g)</label>
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             inputMode="decimal"
                             value={manualP}
                             onChange={e => setManualP(e.target.value)}
@@ -1088,8 +1114,8 @@ export default function Nutrition() {
                         </div>
                         <div>
                           <label className="text-[10px] lg:text-xs font-bold text-orange-500 uppercase tracking-wider mb-1 block">Carb (g)</label>
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             inputMode="decimal"
                             value={manualC}
                             onChange={e => setManualC(e.target.value)}
@@ -1099,8 +1125,8 @@ export default function Nutrition() {
                         </div>
                         <div>
                           <label className="text-[10px] lg:text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1 block">Fat (g)</label>
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             inputMode="decimal"
                             value={manualF}
                             onChange={e => setManualF(e.target.value)}
@@ -1108,9 +1134,20 @@ export default function Nutrition() {
                             className="w-full bg-slate-950 border border-emerald-900/50 rounded-xl p-2.5 lg:p-3 text-sm text-white focus:outline-none focus:border-emerald-500"
                           />
                         </div>
+                        <div>
+                          <label className="text-[10px] lg:text-xs font-bold text-purple-500 uppercase tracking-wider mb-1 block">Fiber (g)</label>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            value={manualFiber}
+                            onChange={e => setManualFiber(e.target.value)}
+                            placeholder="0"
+                            className="w-full bg-slate-950 border border-purple-900/50 rounded-xl p-2.5 lg:p-3 text-sm text-white focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => triggerVerification({ name: manualName, calories: manualCal, protein: manualP, carbs: manualC, fat: manualF, type: manualType })} disabled={!manualName || !manualCal} className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider">
+                        <button onClick={() => triggerVerification({ name: manualName, calories: manualCal, protein: manualP, carbs: manualC, fat: manualF, fiber: manualFiber, type: manualType })} disabled={!manualName || !manualCal} className="flex-1 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider">
                            Add to Meal
                         </button>
                         <button 
@@ -1228,8 +1265,8 @@ export default function Nutrition() {
                        <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Calories (kcal)</label>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               inputMode="numeric"
                               value={verificationItem.calories}
                               onChange={e => setVerificationItem({...verificationItem, calories: parseInt(e.target.value) || 0})}
@@ -1238,8 +1275,8 @@ export default function Nutrition() {
                           </div>
                           <div>
                             <label className="text-[10px] font-bold text-blue-500 uppercase mb-1 block">Protein (g)</label>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               step="0.1"
                               inputMode="decimal"
                               value={verificationItem.protein}
@@ -1249,8 +1286,8 @@ export default function Nutrition() {
                           </div>
                           <div>
                             <label className="text-[10px] font-bold text-orange-500 uppercase mb-1 block">Carbs (g)</label>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               step="0.1"
                               inputMode="decimal"
                               value={verificationItem.carbs}
@@ -1260,13 +1297,24 @@ export default function Nutrition() {
                           </div>
                           <div>
                             <label className="text-[10px] font-bold text-emerald-500 uppercase mb-1 block">Fat (g)</label>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               step="0.1"
                               inputMode="decimal"
                               value={verificationItem.fat}
                               onChange={e => setVerificationItem({...verificationItem, fat: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-emerald-900/30 rounded-xl p-3 text-white focus:border-emerald-500 focus:outline-none"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="text-[10px] font-bold text-purple-500 uppercase mb-1 block">Fiber (g)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              inputMode="decimal"
+                              value={verificationItem.fiber}
+                              onChange={e => setVerificationItem({...verificationItem, fiber: parseFloat(e.target.value) || 0})}
+                              className="w-full bg-slate-900 border border-purple-900/30 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none"
                             />
                           </div>
                        </div>
@@ -1358,8 +1406,8 @@ export default function Nutrition() {
                        <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">{t('nutrition.manual.calories') || 'Calories (kcal)'}</label>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               inputMode="numeric"
                               value={editingLog.calories || ''}
                               onChange={e => setEditingLog({...editingLog, calories: parseInt(e.target.value) || 0})}
@@ -1368,8 +1416,8 @@ export default function Nutrition() {
                           </div>
                           <div>
                             <label className="text-[10px] font-bold text-blue-500 uppercase mb-1 block">Protein (g)</label>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               step="0.1"
                               inputMode="decimal"
                               value={editingLog.protein || ''}
@@ -1379,8 +1427,8 @@ export default function Nutrition() {
                           </div>
                           <div>
                             <label className="text-[10px] font-bold text-orange-500 uppercase mb-1 block">Carbs (g)</label>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               step="0.1"
                               inputMode="decimal"
                               value={editingLog.carbs || ''}
@@ -1390,13 +1438,24 @@ export default function Nutrition() {
                           </div>
                           <div>
                             <label className="text-[10px] font-bold text-emerald-500 uppercase mb-1 block">Fat (g)</label>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               step="0.1"
                               inputMode="decimal"
                               value={editingLog.fat || ''}
                               onChange={e => setEditingLog({...editingLog, fat: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-emerald-900/30 rounded-xl p-3 text-white focus:border-emerald-500 focus:outline-none"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="text-[10px] font-bold text-purple-500 uppercase mb-1 block">Fiber (g)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              inputMode="decimal"
+                              value={editingLog.fiber || ''}
+                              onChange={e => setEditingLog({...editingLog, fiber: parseFloat(e.target.value) || 0})}
+                              className="w-full bg-slate-900 border border-purple-900/30 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none"
                             />
                           </div>
                        </div>
@@ -1420,7 +1479,8 @@ export default function Nutrition() {
                                   calories: Math.round((originalLog?.calories || 0) * ratio),
                                   protein: Math.round(((originalLog?.protein || 0) * ratio) * 10) / 10,
                                   carbs: Math.round(((originalLog?.carbs || 0) * ratio) * 10) / 10,
-                                  fat: Math.round(((originalLog?.fat || 0) * ratio) * 10) / 10
+                                  fat: Math.round(((originalLog?.fat || 0) * ratio) * 10) / 10,
+                                  fiber: Math.round(((originalLog?.fiber || 0) * ratio) * 10) / 10
                                 });
                               } else {
                                 setEditingLog({
@@ -1464,7 +1524,7 @@ export default function Nutrition() {
                       <div key={idx} className="flex justify-between items-center group bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-white truncate">{item.name}</p>
-                          <p className="text-[10px] text-slate-500 uppercase font-bold">{item.calories} kcal • {item.protein}g P • {item.carbs}g C • {item.fat}g F</p>
+                          <p className="text-[10px] text-slate-500 uppercase font-bold">{item.calories} kcal • {item.protein}g P • {item.carbs}g C • {item.fat}g F{item.fiber > 0 ? ` • ${item.fiber}g Fi` : ''}</p>
                         </div>
                         <button onClick={() => setStagedItems(stagedItems.filter((_, i) => i !== idx))} className="text-slate-600 hover:text-red-500 transition-colors ml-2"><X className="w-3.5 h-3.5" /></button>
                       </div>
@@ -1477,6 +1537,7 @@ export default function Nutrition() {
                           <span className="text-blue-500">{stagedItems.reduce((s, i) => s + i.protein, 0)}g P</span>
                           <span className="text-orange-500">{stagedItems.reduce((s, i) => s + i.carbs, 0)}g C</span>
                           <span className="text-red-500">{stagedItems.reduce((s, i) => s + i.fat, 0)}g F</span>
+                          <span className="text-purple-400">{stagedItems.reduce((s, i) => s + i.fiber, 0)}g Fi</span>
                        </div>
                     </div>
                     <button onClick={logMeal} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/20 uppercase tracking-widest text-xs">
@@ -1514,6 +1575,7 @@ export default function Nutrition() {
                                     <span className="text-blue-500">{log.protein}g P</span>
                                     <span className="text-orange-500">{log.carbs}g C</span>
                                     <span className="text-red-500">{log.fat}g F</span>
+                                    {log.fiber > 0 && <span className="text-purple-400">{log.fiber}g Fi</span>}
                                   </div>
                                 </div>
                               </div>

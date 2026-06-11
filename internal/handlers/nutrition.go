@@ -101,12 +101,14 @@ func LogNutrition(w http.ResponseWriter, r *http.Request) {
 			product.Protein = req.Protein * factor
 			product.Carbs = req.Carbs * factor
 			product.Fat = req.Fat * factor
+			product.Fiber = req.Fiber * factor
 		} else {
 			// Fallback if portion is not provided (assume 100g)
 			product.Calories = float64(req.Calories)
 			product.Protein = req.Protein
 			product.Carbs = req.Carbs
 			product.Fat = req.Fat
+			product.Fiber = req.Fiber
 		}
 		
 		product.Type = req.Type
@@ -135,6 +137,7 @@ func GetFoodByBarcode(w http.ResponseWriter, r *http.Request) {
 			"protein":  localProduct.Protein,
 			"carbs":    localProduct.Carbs,
 			"fat":      localProduct.Fat,
+			"fiber":    localProduct.Fiber,
 			"image":    localProduct.Image,
 			"type":     localProduct.Type,
 			"source":   "local",
@@ -190,6 +193,7 @@ func GetFoodByBarcode(w http.ResponseWriter, r *http.Request) {
 		"protein":  getFloat(nutriments, "proteins_100g"),
 		"carbs":    getFloat(nutriments, "carbohydrates_100g"),
 		"fat":      getFloat(nutriments, "fat_100g"),
+		"fiber":    getFloat(nutriments, "fiber_100g"),
 		"image":    product["image_url"],
 		"type":     determineType(product),
 	}
@@ -263,6 +267,7 @@ func SearchFood(w http.ResponseWriter, r *http.Request) {
 			"protein":  getFloat(nutriments, "proteins_100g"),
 			"carbs":    getFloat(nutriments, "carbohydrates_100g"),
 			"fat":      getFloat(nutriments, "fat_100g"),
+			"fiber":    getFloat(nutriments, "fiber_100g"),
 			"image":    product["image_small_url"],
 			"type":     determineType(product),
 		})
@@ -341,6 +346,7 @@ func UpdateNutritionLog(w http.ResponseWriter, r *http.Request) {
 	log.Protein = req.Protein
 	log.Carbs = req.Carbs
 	log.Fat = req.Fat
+	log.Fiber = req.Fiber
 	log.PortionGrams = req.PortionGrams
 	if req.Type != "" {
 		log.Type = req.Type

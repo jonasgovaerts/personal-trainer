@@ -75,6 +75,7 @@ type NutritionLog struct {
 	Protein      float64   `json:"protein"`
 	Carbs        float64   `json:"carbs"`
 	Fat          float64   `json:"fat"`
+	Fiber        float64   `json:"fiber"`
 	PortionGrams float64   `json:"portion_grams"`
 	Type         string    `json:"type" gorm:"size:20"` // 'food' or 'drink'
 	Meal         string    `json:"meal" gorm:"size:50"` // 'breakfast', 'lunch', etc.
@@ -91,6 +92,7 @@ type BarcodeProduct struct {
 	Protein   float64   `json:"protein"`
 	Carbs     float64   `json:"carbs"`
 	Fat       float64   `json:"fat"`
+	Fiber     float64   `json:"fiber"`
 	Type      string    `json:"type" gorm:"size:20"`
 	Image     string    `json:"image"`
 	CreatedAt time.Time `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
