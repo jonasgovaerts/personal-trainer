@@ -82,6 +82,21 @@ type NutritionLog struct {
 	Timestamp    time.Time `json:"timestamp" gorm:"default:CURRENT_TIMESTAMP"`
 }
 
+// BodyMeasurement represents a snapshot of the user's body measurements in cm (weight in kg).
+type BodyMeasurement struct {
+	ID        uint      `json:"id" gorm:"primarykey"`
+	UserID    uint      `json:"user_id" gorm:"index"`
+	WeightKG  float64   `json:"weight_kg"`
+	Chest     float64   `json:"chest"`
+	Waist     float64   `json:"waist"`
+	Hips      float64   `json:"hips"`
+	Bicep     float64   `json:"bicep"`
+	Thigh     float64   `json:"thigh"`
+	Calf      float64   `json:"calf"`
+	Neck      float64   `json:"neck"`
+	Timestamp time.Time `json:"timestamp" gorm:"default:CURRENT_TIMESTAMP"`
+}
+
 // BarcodeProduct represents a cached or user-corrected product mapping.
 type BarcodeProduct struct {
 	ID        uint      `json:"id" gorm:"primarykey"`
