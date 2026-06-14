@@ -279,8 +279,9 @@ func GetEquipment(w http.ResponseWriter, r *http.Request) {
 // CreateWorkout creates a new workout session
 func CreateWorkout(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		UserID uint   `json:"user_id"`
-		Notes  string `json:"notes"`
+		UserID   uint   `json:"user_id"`
+		Notes    string `json:"notes"`
+		ImageURL string `json:"image_url"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Ongeldige aanvraaggegevens")
@@ -293,9 +294,10 @@ func CreateWorkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	workout := models.Workout{
-		UserID: req.UserID,
-		Notes:  req.Notes,
-		Date:   time.Now(),
+		UserID:   req.UserID,
+		Notes:    req.Notes,
+		ImageURL: req.ImageURL,
+		Date:     time.Now(),
 	}
 
 	if err := db.DB.Create(&workout).Error; err != nil {
@@ -304,6 +306,43 @@ func CreateWorkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusCreated, workout)
+}
+
+// UpdateWorkout updates an existing workout session
+func UpdateWorkout(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Ongeldig sessie ID")
+		return
+	}
+
+	var workout models.Workout
+	if err := db.DB.First(&workout, id).Error; err != nil {
+		respondError(w, http.StatusNotFound, "Sessie niet gevonden")
+		return
+	}
+
+	var req struct {
+		Notes          string `json:"notes"`
+		ImageURL       string `json:"image_url"`
+		CaloriesBurned int    `json:"calories_burned"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Ongeldige aanvraaggegevens")
+		return
+	}
+
+	workout.Notes = req.Notes
+	workout.ImageURL = req.ImageURL
+	workout.CaloriesBurned = req.CaloriesBurned
+
+	if err := db.DB.Save(&workout).Error; err != nil {
+		respondError(w, http.StatusInternalServerError, "Fout bij bijwerken van sessie")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, workout)
 }
 
 // LogWorkoutSet adds a set/rep log to a workout

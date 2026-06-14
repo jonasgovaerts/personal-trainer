@@ -7,8 +7,8 @@ import {
   Sparkles, Trash2, Loader2, FileText, Paperclip, Send
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { useUser } from '../contexts/UserContext';
-import { useUI } from '../contexts/UIContext';
+import { useUser } from '../hooks/useUser';
+import { useUI } from '../hooks/useUI';
 
 const renderMessageText = (text: string) => {
   if (!text) return null;

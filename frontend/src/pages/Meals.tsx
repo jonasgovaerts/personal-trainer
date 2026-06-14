@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Utensils, Plus, Trash2, X, Apple, CupSoda, Pencil, Save } from 'lucide-react';
 import Layout from '../components/Layout';
 import FoodPicker, { PickedFoodItem } from '../components/FoodPicker';
-import { useUI } from '../contexts/UIContext';
+import { useUI } from '../hooks/useUI';
 
 interface MealItem {
   id?: number;
@@ -103,6 +103,7 @@ export default function Meals() {
     try {
       const payload = {
         name: mealName.trim(),
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         items: builderItems.map(({ id, ...rest }) => rest)
       };
       const res = await fetch(editingMealId ? `/api/meals/${editingMealId}` : '/api/meals', {

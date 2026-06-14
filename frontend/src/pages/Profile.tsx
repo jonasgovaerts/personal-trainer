@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { User, Target, Settings, RotateCcw, Dumbbell, Save, LogOut, Ruler, Plus, Trash2, TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
-import { useUI } from '../contexts/UIContext';
-import { useUser } from '../contexts/UserContext';
+import { useUI } from '../hooks/useUI';
+import { useUser } from '../hooks/useUser';
 
 interface Measurement {
   id: number;
@@ -153,7 +153,7 @@ export default function Profile() {
     });
 
     fetchMeasurements();
-  }, []);
+  }, [user, toast]);
 
   const handleRetakeWizard = () => {
     localStorage.removeItem('setup_complete');

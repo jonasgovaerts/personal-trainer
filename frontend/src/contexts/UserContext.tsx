@@ -1,29 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-interface UserProfile {
-  id: number;
-  name: string;
-  gender: string;
-  birth_date: string;
-  height: number;
-  current_weight: number;
-  target_weight: number;
-  activity_level: string;
-  goal_calories: number;
-  goal_protein: number;
-  goal_carbs: number;
-  goal_fat: number;
-  last_weight_update: string;
-  equipment: any[];
-}
-
-interface UserContextType {
-  user: UserProfile | null;
-  loading: boolean;
-  refreshUser: () => Promise<void>;
-}
-
-const UserContext = createContext<UserContextType | undefined>(undefined);
+import { useState, useEffect, ReactNode } from 'react';
+import { UserContext, UserProfile } from './user.context';
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -52,12 +28,4 @@ export function UserProvider({ children }: { children: ReactNode }) {
       {children}
     </UserContext.Provider>
   );
-}
-
-export function useUser() {
-  const context = useContext(UserContext);
-  if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider');
-  }
-  return context;
 }

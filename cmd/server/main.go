@@ -29,6 +29,7 @@ func main() {
 	mux.HandleFunc("GET /api/exercises", handlers.GetExercises)
 
 	mux.HandleFunc("POST /api/workouts", handlers.CreateWorkout)
+	mux.HandleFunc("PUT /api/workouts/{id}", handlers.UpdateWorkout)
 	mux.HandleFunc("POST /api/workouts/{id}/log", handlers.LogWorkoutSet)
 	mux.HandleFunc("GET /api/workouts/history", handlers.GetWorkoutHistory)
 	mux.HandleFunc("DELETE /api/workouts/{id}", handlers.DeleteWorkout)

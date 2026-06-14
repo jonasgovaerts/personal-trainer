@@ -6,8 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
 import { format, parseISO } from 'date-fns';
-import { useUser } from '../contexts/UserContext';
-import { useUI } from '../contexts/UIContext';
+import { useUser } from '../hooks/useUser';
+import { useUI } from '../hooks/useUI';
 
 const volumeData = [
   { name: 'Mon', volume: 4000 },

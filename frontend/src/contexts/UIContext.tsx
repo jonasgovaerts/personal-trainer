@@ -1,21 +1,13 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { useState, ReactNode } from 'react';
 import { CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
-
-type ToastType = 'success' | 'error' | 'info';
+import { UIContext, ToastType } from './ui.context';
 
 interface Toast {
   id: string;
   message: string;
   type: ToastType;
 }
-
-interface UIContextType {
-  toast: (message: string, type?: ToastType) => void;
-  confirm: (message: string, onConfirm: () => void, onCancel?: () => void) => void;
-}
-
-const UIContext = createContext<UIContextType | undefined>(undefined);
 
 export function UIProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -105,12 +97,4 @@ export function UIProvider({ children }: { children: ReactNode }) {
       )}
     </UIContext.Provider>
   );
-}
-
-export function useUI() {
-  const context = useContext(UIContext);
-  if (context === undefined) {
-    throw new Error('useUI must be used within a UIProvider');
-  }
-  return context;
 }

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Check, Timer, Activity, ChevronLeft, ChevronRight, Repeat, LayoutList, Dumbbell, PlayCircle } from 'lucide-react';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
-import { useUI } from '../contexts/UIContext';
+import { useUI } from '../hooks/useUI';
 
 interface Exercise {
   id: number;
@@ -85,7 +85,7 @@ export default function ActiveWorkout() {
         toast('Failed to load exercises for this plan.', 'error');
         setLoading(false);
       });
-  }, [plan, navigate]);
+  }, [plan, navigate, toast]);
 
   const toggleSet = (exIndex: number, setIndex: number) => {
     const updated = [...activeExercises];
@@ -164,6 +164,7 @@ export default function ActiveWorkout() {
       let nextRound = currentRound;
       const maxSets = Math.max(...activeExercises.map(e => e.sets.length));
 
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         if (nextIdx >= activeExercises.length) {
           nextIdx = 0;
@@ -193,6 +194,7 @@ export default function ActiveWorkout() {
       let prevIdx = currentExIdx - 1;
       let prevRound = currentRound;
 
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         if (prevIdx < 0) {
           if (prevRound === 0) return; // At the very start

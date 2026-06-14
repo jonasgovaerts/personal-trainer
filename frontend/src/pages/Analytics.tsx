@@ -11,7 +11,7 @@ import {
 } from 'recharts';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import Layout from '../components/Layout';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '../hooks/useUser';
 import { cn } from '../lib/utils';
 
 interface ExercisePR {

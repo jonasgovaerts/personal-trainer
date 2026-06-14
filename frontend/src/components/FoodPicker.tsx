@@ -4,7 +4,7 @@ import {
   Search as SearchIcon, Loader2, AlertTriangle, Check
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { useUI } from '../contexts/UIContext';
+import { useUI } from '../hooks/useUI';
 import { Html5Qrcode } from "html5-qrcode";
 
 export interface PickedFoodItem {
@@ -98,7 +98,7 @@ export default function FoodPicker({ onConfirm, confirmLabel = 'Add Item', secon
               setIsCameraOpen(false);
               toast('Barcode captured! Click Lookup to search.', 'info');
             },
-            (_errorMessage) => {
+            () => {
               // parse error, ignore
             }
           ).catch((err) => {
@@ -128,7 +128,7 @@ export default function FoodPicker({ onConfirm, confirmLabel = 'Add Item', secon
         }
       }
     };
-  }, [activeTab, isCameraOpen]);
+  }, [activeTab, isCameraOpen, toast]);
 
   // Attach the stream to the video element for AI Cam
   useEffect(() => {

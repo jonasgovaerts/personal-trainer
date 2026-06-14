@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight, Check, Dumbbell } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '../hooks/useUser';
 
 interface SetupWizardProps {
   onComplete: () => void;

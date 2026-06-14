@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CalendarDays, Activity, Dumbbell, ChevronDown, ChevronUp, Trash2, UploadCloud, Loader2 } from 'lucide-react';
+import { CalendarDays, Activity, Dumbbell, ChevronDown, ChevronUp, Trash2, UploadCloud, Loader2, Edit } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import Layout from '../components/Layout';
-import { useUI } from '../contexts/UIContext';
+import { useUI } from '../hooks/useUI';
 
 interface WorkoutLog {
   id: number;
@@ -20,6 +20,7 @@ interface Workout {
   id: number;
   date: string;
   notes: string;
+  image_url?: string;
   Logs: WorkoutLog[];
   calories_burned?: number;
 }
@@ -30,6 +31,8 @@ export default function History() {
   const [history, setHistory] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
   
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +65,27 @@ export default function History() {
       window.removeEventListener('refreshData', handleRefresh);
     };
   }, []);
+
+  const handleUpdateImage = (id: number) => {
+    const workout = history.find(w => w.id === id);
+    if (!workout) return;
+
+    fetch(`/api/workouts/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: workout.notes, image_url: imageUrl, calories_burned: workout.calories_burned || 0 }),
+    })
+      .then(res => {
+        if (res.ok) {
+          toast('Workout updated', 'success');
+          setEditingId(null);
+          fetchHistory();
+        } else {
+          toast('Failed to update workout', 'error');
+        }
+      })
+      .catch(() => toast('Network error', 'error'));
+  };
 
   const handleDelete = (e: React.MouseEvent, id: number) => {
     e.stopPropagation(); // Don't expand the card
@@ -197,6 +221,9 @@ export default function History() {
                   
                   {/* Card */}
                   <div className="w-[calc(100%-3.5rem)] md:w-[calc(50%-2.5rem)] bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl shadow-sm transition-all overflow-hidden">
+                    {workout.image_url && (
+                      <img src={workout.image_url} alt={workout.notes || 'Workout image'} className="w-full h-40 object-cover" />
+                    )}
                     <div 
                       className="p-4 lg:p-5 cursor-pointer flex justify-between items-start"
                       onClick={() => toggleExpand(workout.id)}
@@ -227,6 +254,23 @@ export default function History() {
                         <div className="text-slate-500 bg-slate-800/50 p-1.5 rounded-full shrink-0">
                           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isExpanded) {
+                                setEditingId(editingId === workout.id ? null : workout.id);
+                                setImageUrl(workout.image_url || '');
+                            } else {
+                                toggleExpand(workout.id);
+                                setEditingId(workout.id);
+                                setImageUrl(workout.image_url || '');
+                            }
+                          }}
+                          className="p-1.5 text-slate-500 hover:text-blue-500 hover:bg-blue-500/10 rounded-full transition-colors shrink-0"
+                          title="Edit"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
                         <button 
                           onClick={(e) => handleDelete(e, workout.id)}
                           className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors shrink-0"
@@ -240,10 +284,25 @@ export default function History() {
                     {/* Expanded Details */}
                     {isExpanded && (
                       <div className="px-4 lg:px-5 pb-5 pt-2 border-t border-slate-800/50 bg-slate-950/30">
-                        {groupedLogs.length === 0 ? (
-                          <p className="text-sm text-slate-500 italic">{t('history.noLogs')}</p>
+                        {editingId === workout.id ? (
+                           <div className="mt-4 space-y-2">
+                            <label className="text-xs font-semibold text-slate-400">Image URL</label>
+                             <input
+                               type="text"
+                               value={imageUrl}
+                               onChange={(e) => setImageUrl(e.target.value)}
+                               placeholder="https://example.com/image.png"
+                               className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                             />
+                             <div className="flex justify-end gap-2 pt-1">
+                               <button onClick={(e) => { e.stopPropagation(); setEditingId(null); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors">Cancel</button>
+                               <button onClick={(e) => { e.stopPropagation(); handleUpdateImage(workout.id); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors">Save</button>
+                             </div>
+                           </div>
+                        ) : groupedLogs.length === 0 ? (
+                          <p className="text-sm text-slate-500 italic pt-4">{t('history.noLogs')}</p>
                         ) : (
-                          <div className="space-y-4">
+                          <div className="space-y-4 pt-4">
                             {groupedLogs.map((group, gIdx) => (
                               <div key={gIdx}>
                                 <h4 className="text-xs lg:text-sm font-semibold text-slate-300 mb-2">{group.name}</h4>

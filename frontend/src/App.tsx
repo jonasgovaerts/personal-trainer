@@ -12,7 +12,8 @@ import Meals from './pages/Meals'
 import Profile from './pages/Profile'
 import SetupWizard from './components/SetupWizard'
 import { UIProvider } from './contexts/UIContext'
-import { UserProvider, useUser } from './contexts/UserContext'
+import { UserProvider } from './contexts/UserContext';
+import { useUser } from './hooks/useUser';
 
 function AppContent() {
   const { user, loading, refreshUser } = useUser();

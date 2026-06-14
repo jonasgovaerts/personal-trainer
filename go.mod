@@ -1,9 +1,10 @@
 module github.com/user/personal-trainer
 
-go 1.26.3
+go 1.25.8
 
 require (
 	github.com/google/generative-ai-go v0.20.1
+	github.com/muktihari/fit v0.28.1
 	google.golang.org/api v0.283.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
@@ -30,7 +31,6 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/muktihari/fit v0.28.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.67.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect

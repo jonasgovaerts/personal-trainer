@@ -3,7 +3,7 @@ import { Reorder } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { GripVertical, Plus, Search, Dumbbell, Save, Clock, Target, Trash2 } from 'lucide-react';
 import Layout from '../components/Layout';
-import { useUI } from '../contexts/UIContext';
+import { useUI } from '../hooks/useUI';
 
 interface Exercise {
   id: number;
@@ -43,7 +43,7 @@ export default function WorkoutBuilder() {
         toast('Failed to load exercise library', 'error');
         setLoading(false);
       });
-  }, []);
+  }, [toast]);
 
   const filteredLibrary = exerciseLibrary.filter(ex => 
     ex.name.toLowerCase().includes(search.toLowerCase()) || 

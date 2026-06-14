@@ -49,6 +49,7 @@ type Workout struct {
 	UserID         uint         `json:"user_id"`
 	Date           time.Time    `json:"date" gorm:"type:date;default:CURRENT_DATE"`
 	Notes          string       `json:"notes" gorm:"type:text"`
+	ImageURL       string       `json:"image_url" gorm:"size:255"`
 	CaloriesBurned int          `json:"calories_burned"`
 	Logs           []WorkoutLog `json:"logs" gorm:"foreignKey:WorkoutID"`
 }
