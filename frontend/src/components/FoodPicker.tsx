@@ -98,7 +98,7 @@ export default function FoodPicker({ onConfirm, confirmLabel = 'Add Item', secon
               setIsCameraOpen(false);
               toast('Barcode captured! Click Lookup to search.', 'info');
             },
-            (_errorMessage) => {
+            () => {
               // parse error, ignore
             }
           ).catch((err) => {

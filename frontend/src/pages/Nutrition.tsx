@@ -331,7 +331,7 @@ export default function Nutrition() {
               setIsCameraOpen(false);
               toast('Barcode captured! Click Lookup to search.', 'info');
             },
-            (_errorMessage) => {
+            () => {
               // parse error, ignore
             }
           ).catch((err) => {
