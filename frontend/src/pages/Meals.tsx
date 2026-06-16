@@ -103,6 +103,7 @@ export default function Meals() {
     try {
       const payload = {
         name: mealName.trim(),
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         items: builderItems.map(({ id, ...rest }) => rest)
       };
       const res = await fetch(editingMealId ? `/api/meals/${editingMealId}` : '/api/meals', {

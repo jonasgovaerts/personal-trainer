@@ -1,6 +1,6 @@
 module github.com/user/personal-trainer
 
-go 1.26.3
+go 1.25.11
 
 require (
 	github.com/google/generative-ai-go v0.20.1

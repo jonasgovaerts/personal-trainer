@@ -43,6 +43,7 @@ export default function WorkoutBuilder() {
         toast('Failed to load exercise library', 'error');
         setLoading(false);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredLibrary = exerciseLibrary.filter(ex => 

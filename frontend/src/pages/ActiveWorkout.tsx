@@ -49,6 +49,40 @@ export default function ActiveWorkout() {
   }, [currentExIdx]);
 
   useEffect(() => {
+    let wakeLock: any = null;
+
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => {
+            wakeLock = null;
+          });
+        }
+      } catch (err) {
+        console.error('Wake Lock error:', err);
+      }
+    };
+
+    requestWakeLock();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && wakeLock === null) {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wakeLock) {
+        wakeLock.release().catch(console.error);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!plan) {
       navigate('/plans');
       return;
@@ -85,7 +119,7 @@ export default function ActiveWorkout() {
         toast('Failed to load exercises for this plan.', 'error');
         setLoading(false);
       });
-  }, [plan, navigate]);
+  }, [plan, navigate, toast]);
 
   const toggleSet = (exIndex: number, setIndex: number) => {
     const updated = [...activeExercises];
@@ -164,6 +198,7 @@ export default function ActiveWorkout() {
       let nextRound = currentRound;
       const maxSets = Math.max(...activeExercises.map(e => e.sets.length));
 
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         if (nextIdx >= activeExercises.length) {
           nextIdx = 0;
@@ -193,6 +228,7 @@ export default function ActiveWorkout() {
       let prevIdx = currentExIdx - 1;
       let prevRound = currentRound;
 
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         if (prevIdx < 0) {
           if (prevRound === 0) return; // At the very start

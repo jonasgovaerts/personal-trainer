@@ -331,7 +331,7 @@ export default function Nutrition() {
               setIsCameraOpen(false);
               toast('Barcode captured! Click Lookup to search.', 'info');
             },
-            (_errorMessage) => {
+            () => {
               // parse error, ignore
             }
           ).catch((err) => {
@@ -361,7 +361,7 @@ export default function Nutrition() {
         }
       }
     };
-  }, [activeTab, isCameraOpen]);
+  }, [activeTab, isCameraOpen, toast]);
 
   // Attach the stream to the video element for AI Cam
   useEffect(() => {
