@@ -1595,7 +1595,7 @@ export default function Nutrition() {
                        <span className="font-bold text-sm">Meal Builder</span>
                        <span className="bg-white/20 text-[10px] px-2 py-0.5 rounded-full">{stagedItems.length}</span>
                     </div>
-                    <button onClick={() => setStagedItems([])} className="text-blue-100 hover:text-white"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => confirm(t('nutrition.confirmDeleteMeal') || 'Delete this meal?', () => setStagedItems([]))} className="text-blue-100 hover:text-white"><Trash2 className="w-4 h-4" /></button>
                  </div>
                  <div className="p-3 space-y-2 max-h-48 overflow-y-auto custom-scrollbar bg-slate-950/30">
                     {stagedItems.map((item, idx) => (
