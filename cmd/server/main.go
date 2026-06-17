@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -12,7 +13,27 @@ import (
 	"github.com/user/personal-trainer/internal/handlers"
 )
 
+func getCommitMessage() string {
+	// Try to read from commit.txt (Docker builds)
+	b, err := os.ReadFile("commit.txt")
+	if err == nil {
+		return strings.TrimSpace(string(b))
+	}
+	
+	// Fallback: use git command (local dev)
+	cmd := exec.Command("git", "log", "-1", "--pretty=%B")
+	out, err := cmd.Output()
+	if err == nil {
+		return strings.TrimSpace(string(out))
+	}
+	
+	return "unknown commit"
+}
+
 func main() {
+	// Log the latest commit message
+	log.Printf("Starting application... Latest commit: %s", getCommitMessage())
+
 	// Initialize database
 	db.InitDB()
 
