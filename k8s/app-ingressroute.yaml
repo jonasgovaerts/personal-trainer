@@ -1,0 +1,25 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: personal-trainer-outpost
+  namespace: personal-trainer
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host("personal-trainer.jonasg.be") && PathPrefix("/outpost.goauthentik.io/")
+      priority: 10000
+      services:
+        - name: ak-outpost-homelab
+          namespace: default
+          port: 9000
+    - kind: Rule
+      match: Host("personal-trainer.homelab.jonasg.be") && PathPrefix("/outpost.goauthentik.io/")
+      priority: 10000
+      services:
+        - name: ak-outpost-homelab
+          namespace: default
+          port: 9000
+  tls:
+    secretName: personal-trainer-tls
