@@ -28,6 +28,14 @@ interface ActiveExercise {
 
 type WorkoutMode = 'standard' | 'circuit';
 
+// Convert a YouTube watch/short URL to an embeddable URL.
+function toEmbedUrl(url: string): string {
+  if (!url) return '';
+  if (url.includes('watch?v=')) return `https://www.youtube.com/embed/${url.split('watch?v=')[1].split('&')[0]}`;
+  if (url.includes('youtu.be/')) return `https://www.youtube.com/embed/${url.split('youtu.be/')[1].split('?')[0]}`;
+  return url;
+}
+
 export default function ActiveWorkout() {
   const { t } = useTranslation();
   const { toast } = useUI();
@@ -276,7 +284,7 @@ export default function ActiveWorkout() {
         {/* Header */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-10 backdrop-blur-md bg-opacity-90">
           <div>
-            <h1 className="text-2xl font-bold text-white">{t(`predefined.plan.${plan.id}.name`)}</h1>
+            <h1 className="text-2xl font-bold text-white">{plan?.name || t(`predefined.plan.${plan.id}.name`)}</h1>
             <p className="text-slate-400 text-sm mt-1 flex items-center gap-2">
               <Timer className="w-4 h-4" /> {t('active.inProgress')}
             </p>
@@ -319,8 +327,8 @@ export default function ActiveWorkout() {
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none z-10" />
               
               {isPlaying && activeEx.exercise.video_url ? (
-                <iframe 
-                  src={`${activeEx.exercise.video_url.replace('watch?v=', 'embed/')}?autoplay=1`} 
+                <iframe
+                  src={`${toEmbedUrl(activeEx.exercise.video_url)}?autoplay=1`}
                   title={activeEx.exercise.name}
                   className="w-full h-full absolute inset-0 z-20 border-0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 

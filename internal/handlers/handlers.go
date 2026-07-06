@@ -232,6 +232,8 @@ type exerciseRequest struct {
 	Name          string `json:"name"`
 	Description   string `json:"description"`
 	HockeyBenefit string `json:"hockey_benefit"`
+	VideoURL      string `json:"video_url"`
+	ImageURL      string `json:"image_url"`
 	EquipmentIDs  []uint `json:"equipment_ids"`
 }
 
@@ -254,6 +256,8 @@ func CreateExercise(w http.ResponseWriter, r *http.Request) {
 		Name:          req.Name,
 		Description:   req.Description,
 		HockeyBenefit: req.HockeyBenefit,
+		VideoURL:      req.VideoURL,
+		ImageURL:      req.ImageURL,
 	}
 	if err := db.DB.Create(&exercise).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to create exercise")
@@ -294,6 +298,8 @@ func UpdateExercise(w http.ResponseWriter, r *http.Request) {
 	exercise.Name = req.Name
 	exercise.Description = req.Description
 	exercise.HockeyBenefit = req.HockeyBenefit
+	exercise.VideoURL = req.VideoURL
+	exercise.ImageURL = req.ImageURL
 	if err := db.DB.Save(&exercise).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to update exercise")
 		return

@@ -36,6 +36,8 @@ export default function Exercises() {
   const [formName, setFormName] = useState('');
   const [formDesc, setFormDesc] = useState('');
   const [formBenefit, setFormBenefit] = useState('');
+  const [formVideo, setFormVideo] = useState('');
+  const [formImage, setFormImage] = useState('');
   const [formEquipmentIds, setFormEquipmentIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -65,6 +67,8 @@ export default function Exercises() {
     setFormName('');
     setFormDesc('');
     setFormBenefit('');
+    setFormVideo('');
+    setFormImage('');
     setFormEquipmentIds([]);
     setShowForm(true);
   };
@@ -74,6 +78,8 @@ export default function Exercises() {
     setFormName(ex.name);
     setFormDesc(ex.description || '');
     setFormBenefit(ex.hockey_benefit || '');
+    setFormVideo(ex.video_url || '');
+    setFormImage(ex.image_url || '');
     setFormEquipmentIds((ex.equipment || []).map(e => e.id).filter((id): id is number => typeof id === 'number'));
     setShowForm(true);
   };
@@ -93,6 +99,8 @@ export default function Exercises() {
         name: formName.trim(),
         description: formDesc.trim(),
         hockey_benefit: formBenefit.trim(),
+        video_url: formVideo.trim(),
+        image_url: formImage.trim(),
         equipment_ids: formEquipmentIds,
       };
       const res = await fetch(editingId ? `/api/exercises/${editingId}` : '/api/exercises', {
@@ -227,6 +235,26 @@ export default function Exercises() {
                   value={formBenefit}
                   onChange={e => setFormBenefit(e.target.value)}
                   placeholder={t('exercises.form.benefitPlaceholder') || 'What it improves...'}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('exercises.form.videoUrl') || 'Video URL'}</label>
+                <input
+                  type="url"
+                  value={formVideo}
+                  onChange={e => setFormVideo(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('exercises.form.imageUrl') || 'Image URL'}</label>
+                <input
+                  type="url"
+                  value={formImage}
+                  onChange={e => setFormImage(e.target.value)}
+                  placeholder="https://..."
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500"
                 />
               </div>
