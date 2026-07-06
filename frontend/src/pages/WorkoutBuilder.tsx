@@ -179,6 +179,7 @@ export default function WorkoutBuilder() {
             name: re.exercise?.name || '',
             sets: re.sets,
             reps: parseInt(re.reps) || 0,
+            rest: re.rest,
           })),
         }
       }

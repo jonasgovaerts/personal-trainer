@@ -24,6 +24,20 @@ interface SetLog {
 interface ActiveExercise {
   exercise: Exercise;
   sets: SetLog[];
+  rest?: string;
+}
+
+const SESSION_KEY = 'active_workout_session';
+const REST_DEFAULT = 60;
+
+// Parse a rest string like "90s", "90", or "1m" into seconds.
+function parseRest(r?: string): number {
+  if (!r) return REST_DEFAULT;
+  const m = r.match(/(\d+)/);
+  if (!m) return REST_DEFAULT;
+  let s = parseInt(m[1], 10);
+  if (/m/i.test(r)) s *= 60;
+  return s || REST_DEFAULT;
 }
 
 type WorkoutMode = 'standard' | 'circuit';
@@ -41,7 +55,10 @@ export default function ActiveWorkout() {
   const { toast } = useUI();
   const location = useLocation();
   const navigate = useNavigate();
-  const plan = location.state?.plan;
+
+  const [plan, setPlan] = useState<any>(location.state?.plan || null);
+  const [resumable, setResumable] = useState<any>(null);
+  const [restLeft, setRestLeft] = useState(0);
 
   const [activeExercises, setActiveExercises] = useState<ActiveExercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +107,20 @@ export default function ActiveWorkout() {
 
   useEffect(() => {
     if (!plan) {
-      navigate('/plans');
+      // No incoming plan — offer to resume a previously saved session, else go to plans.
+      const saved = localStorage.getItem(SESSION_KEY);
+      if (saved) {
+        try { setResumable(JSON.parse(saved)); } catch { localStorage.removeItem(SESSION_KEY); }
+        setLoading(false);
+      } else {
+        navigate('/plans');
+      }
+      return;
+    }
+
+    // Already hydrated (e.g. resumed) — don't rebuild and overwrite live sets.
+    if (activeExercises.length > 0) {
+      setLoading(false);
       return;
     }
 
@@ -98,16 +128,17 @@ export default function ActiveWorkout() {
       .then(res => res.json())
       .then(data => {
         const library: Exercise[] = data || [];
-        
+
         const mapped = plan.exercises.map((planEx: any) => {
           const exName = typeof planEx === 'string' ? planEx : planEx.name;
-          const found = library.find(e => e.name.toLowerCase() === exName.toLowerCase()) 
+          const found = library.find(e => e.name.toLowerCase() === exName.toLowerCase())
                         || { id: 0, name: exName, description: '' };
-          
+
           const numSets = planEx.sets || 3;
-          
+
           return {
             exercise: found,
+            rest: planEx.rest,
             sets: Array.from({ length: numSets }).map((_, i) => ({
               id: `set-${found.id}-${i}`,
               reps: planEx.reps || 0,
@@ -127,10 +158,57 @@ export default function ActiveWorkout() {
       });
   }, [plan, navigate]);
 
+  // Persist the live session so it survives a reload / crash.
+  useEffect(() => {
+    if (plan && activeExercises.length > 0) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ plan, activeExercises, mode, currentExIdx, currentRound }));
+    }
+  }, [plan, activeExercises, mode, currentExIdx, currentRound]);
+
+  // Rest-timer countdown.
+  useEffect(() => {
+    if (restLeft <= 0) return;
+    const id = setInterval(() => {
+      setRestLeft(v => {
+        if (v <= 1) {
+          clearInterval(id);
+          try { navigator.vibrate?.(300); } catch { /* no-op */ }
+          return 0;
+        }
+        return v - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [restLeft]);
+
+  const resumeSession = () => {
+    const s = resumable;
+    setPlan(s.plan);
+    setActiveExercises(s.activeExercises || []);
+    setMode(s.mode || 'standard');
+    setCurrentExIdx(s.currentExIdx || 0);
+    setCurrentRound(s.currentRound || 0);
+    setResumable(null);
+    setLoading(false);
+  };
+
+  const discardSession = () => {
+    localStorage.removeItem(SESSION_KEY);
+    setResumable(null);
+    navigate('/plans');
+  };
+
   const toggleSet = (exIndex: number, setIndex: number) => {
     const updated = [...activeExercises];
-    updated[exIndex].sets[setIndex].completed = !updated[exIndex].sets[setIndex].completed;
+    const nowCompleted = !updated[exIndex].sets[setIndex].completed;
+    updated[exIndex].sets[setIndex].completed = nowCompleted;
     setActiveExercises(updated);
+
+    if (nowCompleted) {
+      // Start the rest countdown, and in circuit mode advance to the next exercise.
+      setRestLeft(parseRest(updated[exIndex].rest));
+      if (mode === 'circuit') setTimeout(() => handleNext(), 500);
+    }
   };
 
   const updateSet = (exIndex: number, setIndex: number, field: 'reps' | 'weight', value: string) => {
@@ -182,6 +260,7 @@ export default function ActiveWorkout() {
         }
       }
 
+      localStorage.removeItem(SESSION_KEY);
       toast(t('active.saved'), 'success');
       navigate('/');
     } catch (err) {
@@ -266,6 +345,30 @@ export default function ActiveWorkout() {
     }
   };
 
+  // Offer to resume an unfinished session when arriving with no plan.
+  if (!plan && resumable) {
+    const exCount = resumable.activeExercises?.length || 0;
+    return (
+      <Layout>
+        <div className="max-w-md mx-auto mt-16 bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center shadow-sm">
+          <Timer className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-1">{t('active.resumeTitle') || 'Resume workout?'}</h2>
+          <p className="text-sm text-slate-400 mb-6">
+            {resumable.plan?.name || t('active.resumeGeneric') || 'You have an unfinished workout'} — {exCount} {t('builder.exercisesLabel') || 'exercises'}
+          </p>
+          <div className="flex gap-3">
+            <button onClick={discardSession} className="flex-1 py-3 rounded-xl font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors">
+              {t('active.discard') || 'Discard'}
+            </button>
+            <button onClick={resumeSession} className="flex-[1.5] py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors">
+              {t('active.resume') || 'Resume'}
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   if (!plan || loading || activeExercises.length === 0) {
     return (
       <Layout>
@@ -318,6 +421,21 @@ export default function ActiveWorkout() {
           <span>Exercise {currentExIdx + 1} of {activeExercises.length}</span>
           {mode === 'circuit' && <span>Round {currentRound + 1}</span>}
         </div>
+
+        {/* Rest timer */}
+        {restLeft > 0 && (
+          <div className="flex items-center justify-between bg-blue-600/10 border border-blue-500/30 rounded-2xl px-5 py-3">
+            <div className="flex items-center gap-3">
+              <Timer className="w-5 h-5 text-blue-400 animate-pulse" />
+              <span className="text-sm font-bold text-blue-300 uppercase tracking-wider">{t('active.rest') || 'Rest'}</span>
+              <span className="text-2xl font-bold text-white tabular-nums">{Math.floor(restLeft / 60)}:{String(restLeft % 60).padStart(2, '0')}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setRestLeft(v => v + 15)} className="text-xs font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors">+15s</button>
+              <button onClick={() => setRestLeft(0)} className="text-xs font-bold text-blue-400 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors">{t('active.skip') || 'Skip'}</button>
+            </div>
+          </div>
+        )}
 
         {/* Active Exercise Card */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">

@@ -5,9 +5,9 @@ import {
   Target,
   ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, BarChart, Bar, Cell
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart, Bar, Cell, LineChart, Line, Legend
 } from 'recharts';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import Layout from '../components/Layout';
@@ -23,14 +23,18 @@ interface ExercisePR {
 export default function Analytics() {
   const { t } = useTranslation();
   const { user } = useUser();
-  const [history, setHistory] = useState<any[]>([]);
+  const [allHistory, setAllHistory] = useState<any[]>([]);
   const [timeRange, setTimeRange] = useState('7d');
+  const [selectedExercise, setSelectedExercise] = useState<string>('');
+  const [showAllPRs, setShowAllPRs] = useState(false);
+
+  const rangeDays = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : null; // null = All
 
   const fetchAnalyticsData = () => {
     fetch('/api/workouts/history?user_id=me')
       .then(res => res.json())
       .then(data => {
-        setHistory(Array.isArray(data) ? data : []);
+        setAllHistory(Array.isArray(data) ? data : []);
       })
       .catch(err => {
         console.error("Failed to fetch history:", err);
@@ -45,10 +49,19 @@ export default function Analytics() {
     return () => clearInterval(interval);
   }, []);
 
-  // 1. Calculate Volume Chart Data (Last 7 Days)
+  // Filter history to the selected time range.
+  const history = rangeDays === null
+    ? allHistory
+    : allHistory.filter(w => {
+        const d = parseISO(w.date);
+        return d >= new Date(Date.now() - (rangeDays - 1) * 24 * 60 * 60 * 1000 - 24 * 60 * 60 * 1000);
+      });
+
+  // 1. Volume chart data over the selected window (daily buckets, capped at 30 points).
   const getVolumeData = () => {
+    const windowDays = Math.min(rangeDays ?? 30, 30);
     const days = eachDayOfInterval({
-      start: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+      start: new Date(Date.now() - (windowDays - 1) * 24 * 60 * 60 * 1000),
       end: new Date()
     });
 
@@ -90,7 +103,7 @@ export default function Analytics() {
       });
     });
     
-    return Object.values(prs).sort((a, b) => b.weight - a.weight).slice(0, 6);
+    return Object.values(prs).sort((a, b) => b.weight - a.weight);
   };
 
   // 3. Calculate Exercise Distribution
@@ -112,6 +125,39 @@ export default function Analytics() {
   const volumeData = getVolumeData();
   const personalBests = getPersonalBests();
   const distribution = getDistribution();
+
+  // 4. Per-exercise progression: top-set weight + estimated 1RM (Epley) per session date.
+  const exerciseNames = Array.from(new Set(
+    allHistory.flatMap(w => (w.logs || []).map((l: any) => l.exercise?.name).filter(Boolean))
+  )).sort();
+
+  const effectiveExercise = selectedExercise || exerciseNames[0] || '';
+
+  const getProgression = () => {
+    const points: { date: string; weight: number; e1rm: number }[] = [];
+    const asc = [...allHistory].sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+    asc.forEach(workout => {
+      let topWeight = 0;
+      let bestE1rm = 0;
+      (workout.logs || []).forEach((log: any) => {
+        if (log.exercise?.name !== effectiveExercise) return;
+        const wkg = log.weight_kg || 0;
+        const reps = log.reps || 0;
+        if (wkg > topWeight) topWeight = wkg;
+        const e1rm = wkg * (1 + reps / 30); // Epley
+        if (e1rm > bestE1rm) bestE1rm = e1rm;
+      });
+      if (topWeight > 0 || bestE1rm > 0) {
+        points.push({
+          date: format(parseISO(workout.date), 'MMM d'),
+          weight: Math.round(topWeight * 10) / 10,
+          e1rm: Math.round(bestE1rm * 10) / 10,
+        });
+      }
+    });
+    return points;
+  };
+  const progressionData = getProgression();
 
   // Summary Metrics
   const totalVolume = history.reduce((acc, w) => {
@@ -290,6 +336,40 @@ export default function Analytics() {
             </div>
           </div>
 
+          {/* Exercise progression */}
+          <div className="lg:col-span-2">
+            <div className="bg-slate-900 border border-slate-800 p-5 lg:p-6 rounded-2xl shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                <h3 className="font-semibold text-base lg:text-lg text-white">{t('analytics.exerciseProgress') || 'Exercise Progress'}</h3>
+                <select
+                  value={effectiveExercise}
+                  onChange={e => setSelectedExercise(e.target.value)}
+                  className="bg-slate-950 border border-slate-700 rounded-lg py-1.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500 max-w-[60%]"
+                >
+                  {exerciseNames.length === 0 && <option value="">{t('analytics.noData') || 'No data'}</option>}
+                  {exerciseNames.map(name => <option key={name} value={name}>{name}</option>)}
+                </select>
+              </div>
+              {progressionData.length === 0 ? (
+                <p className="text-sm text-slate-500 italic py-10 text-center">{t('analytics.progressEmpty') || 'Log this exercise with weights to see progress.'}</p>
+              ) : (
+                <div className="h-64 lg:h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={progressionData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '12px' }} />
+                      <Legend wrapperStyle={{ fontSize: '11px' }} />
+                      <Line type="monotone" dataKey="weight" name={t('analytics.topSet') || 'Top set (kg)'} stroke="#3b82f6" strokeWidth={3} dot={{ r: 3 }} />
+                      <Line type="monotone" dataKey="e1rm" name={t('analytics.est1rm') || 'Est. 1RM (kg)'} stroke="#a855f7" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Sidebar: Personal Bests */}
           <div className="space-y-6">
             <div className="bg-slate-900 border border-slate-800 p-5 lg:p-6 rounded-2xl shadow-sm">
@@ -302,7 +382,7 @@ export default function Analytics() {
                 {personalBests.length === 0 ? (
                   <p className="text-sm text-slate-500 italic sm:col-span-2">Log workouts to see your PRs!</p>
                 ) : (
-                  personalBests.map((pr, idx) => (
+                  (showAllPRs ? personalBests : personalBests.slice(0, 6)).map((pr, idx) => (
                     <div key={idx} className="group p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-blue-500/50 transition-colors">
                       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 truncate">{pr.name}</p>
                       <div className="flex items-end justify-between">
@@ -314,9 +394,14 @@ export default function Analytics() {
                 )}
               </div>
               
-              <button className="w-full mt-6 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors uppercase tracking-wider">
-                View All PRs
-              </button>
+              {personalBests.length > 6 && (
+                <button
+                  onClick={() => setShowAllPRs(v => !v)}
+                  className="w-full mt-6 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors uppercase tracking-wider"
+                >
+                  {showAllPRs ? (t('analytics.showLess') || 'Show Less') : `${t('analytics.viewAllPRs') || 'View All PRs'} (${personalBests.length})`}
+                </button>
+              )}
             </div>
           </div>
 

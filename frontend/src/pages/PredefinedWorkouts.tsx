@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Play, Clock, Flame, Dumbbell } from 'lucide-react';
+import { Play, Clock, Flame, Dumbbell, Bookmark } from 'lucide-react';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
+import { useUI } from '../contexts/UIContext';
 
 // Mock data for predefined workouts
 const predefinedPlans = [
@@ -182,16 +184,17 @@ const predefinedPlans = [
 export default function PredefinedWorkouts() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState('All');
-  const [availableExercises, setAvailableExercises] = useState<string[]>([]);
+  const [library, setLibrary] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const availableExercises = library.map(ex => ex.name.toLowerCase());
 
   useEffect(() => {
     // Fetch exercises filtered by user's equipment
     fetch('/api/exercises?user_id=me')
       .then(res => res.json())
       .then(data => {
-        if (data) {
-          setAvailableExercises(data.map((ex: any) => ex.name.toLowerCase()));
+        if (Array.isArray(data)) {
+          setLibrary(data.map((ex: any) => ({ id: ex.id, name: ex.name })));
         }
         setLoading(false);
       })
@@ -250,7 +253,7 @@ export default function PredefinedWorkouts() {
               {filteredPlans.map(plan => {
                 // Check if user has all required exercises for this plan
                 const hasEquipment = plan.exercises.every(ex => availableExercises.includes(ex.name.toLowerCase()));
-                return <PlanCard key={plan.id} plan={plan} t={t} hasEquipment={hasEquipment} />
+                return <PlanCard key={plan.id} plan={plan} t={t} hasEquipment={hasEquipment} library={library} />
               })}
             </div>
           )}
@@ -260,10 +263,47 @@ export default function PredefinedWorkouts() {
   );
 }
 
-import { useNavigate } from 'react-router-dom';
-
-function PlanCard({ plan, t, hasEquipment }: { plan: any, t: any, hasEquipment: boolean }) {
+function PlanCard({ plan, t, hasEquipment, library }: { plan: any, t: any, hasEquipment: boolean, library: { id: number; name: string }[] }) {
   const navigate = useNavigate();
+  const { toast } = useUI();
+  const [saving, setSaving] = useState(false);
+
+  const saveAsRoutine = async () => {
+    if (saving) return;
+    const byName = new Map(library.map(e => [e.name.toLowerCase(), e.id]));
+    const exercises = plan.exercises
+      .map((ex: any, idx: number) => {
+        const id = byName.get(ex.name.toLowerCase());
+        if (!id) return null;
+        return { exercise_id: id, sets: ex.sets || 3, reps: String(ex.reps ?? ''), rest: '90s', position: idx };
+      })
+      .filter(Boolean);
+
+    if (exercises.length === 0) {
+      toast(t('predefined.saveNoMatch') || 'None of these exercises are in your library yet', 'error');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/routines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: t(`predefined.plan.${plan.id}.name`), exercises }),
+      });
+      if (!res.ok) throw new Error('save failed');
+      const skipped = plan.exercises.length - exercises.length;
+      toast(
+        (t('predefined.savedAsRoutine') || 'Saved as routine') + (skipped > 0 ? ` (${skipped} skipped)` : ''),
+        'success'
+      );
+    } catch (err) {
+      console.error(err);
+      toast(t('predefined.saveError') || 'Could not save routine', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className={cn(
@@ -306,13 +346,21 @@ function PlanCard({ plan, t, hasEquipment }: { plan: any, t: any, hasEquipment: 
         </div>
       </div>
       
-      <div className="p-4 bg-slate-800/20 shrink-0">
-        <button 
+      <div className="p-4 bg-slate-800/20 shrink-0 flex gap-2">
+        <button
           onClick={() => navigate('/active-workout', { state: { plan } })}
-          className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-blue-600 text-white text-sm font-semibold py-3 rounded-xl transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-blue-600 text-white text-sm font-semibold py-3 rounded-xl transition-colors"
         >
           <Play className="w-4 h-4" />
           {t('predefined.start')}
+        </button>
+        <button
+          onClick={saveAsRoutine}
+          disabled={saving}
+          title={t('predefined.saveAsRoutine') || 'Save as routine'}
+          className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 text-sm font-semibold py-3 px-4 rounded-xl transition-colors"
+        >
+          <Bookmark className="w-4 h-4" />
         </button>
       </div>
     </div>
