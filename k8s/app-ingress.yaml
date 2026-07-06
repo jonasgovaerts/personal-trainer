@@ -7,7 +7,6 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-cloudflare
     external-dns.alpha.kubernetes.io/hostname: personal-trainer.homelab.jonasg.be
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.middlewares: personal-trainer-authentik-auth@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:

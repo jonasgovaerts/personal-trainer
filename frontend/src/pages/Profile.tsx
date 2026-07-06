@@ -412,7 +412,7 @@ export default function Profile() {
               </div>
               <button 
                 onClick={() => {
-                  window.location.href = 'https://authentik.jonasg.be/application/o/personal-trainer/end-session/';
+                  window.location.href = '/auth/logout';
                 }}
                 className="bg-red-600 hover:bg-red-500 text-white font-semibold py-2.5 px-6 rounded-xl transition-colors flex items-center gap-2 shrink-0"
               >

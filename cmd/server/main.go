@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/user/personal-trainer/internal/auth"
 	"github.com/user/personal-trainer/internal/db"
 	"github.com/user/personal-trainer/internal/handlers"
 )
@@ -37,8 +38,16 @@ func main() {
 	// Initialize database
 	db.InitDB()
 
+	// Initialize OIDC (Authentik). Aborts startup if misconfigured.
+	auth.Init()
+
 	// Set up router
 	mux := http.NewServeMux()
+
+	// OIDC auth routes (public; excluded from RequireAuth)
+	mux.HandleFunc("GET /auth/login", auth.HandleLogin)
+	mux.HandleFunc("GET /auth/callback", auth.HandleCallback)
+	mux.HandleFunc("GET /auth/logout", auth.HandleLogout)
 
 	// API Routes (using Go 1.22+ routing)
 	mux.HandleFunc("GET /api/user/{id}", handlers.GetUser)
@@ -92,7 +101,7 @@ func main() {
 	})
 
 	// Wrap mux with middleware chain
-	handler := loggingMiddleware(corsMiddleware(mux))
+	handler := loggingMiddleware(corsMiddleware(auth.RequireAuth(mux)))
 
 	port := os.Getenv("PORT")
 	if port == "" {

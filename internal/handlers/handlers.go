@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/user/personal-trainer/internal/auth"
 	"github.com/user/personal-trainer/internal/db"
 	"github.com/user/personal-trainer/internal/models"
 )
@@ -30,41 +31,24 @@ func respondError(w http.ResponseWriter, code int, message string) {
 	respondJSON(w, code, map[string]string{"error": message})
 }
 
-// GetCurrentUser retrieves the logged-in user from Authentik headers or defaults to ID 1 in development
+// GetCurrentUser retrieves the logged-in user from the OIDC session, auto-provisioning
+// the database record on first login. The RequireAuth middleware guarantees a session
+// is present before any handler runs.
 func GetCurrentUser(r *http.Request) models.User {
-	username := r.Header.Get("X-Authentik-Username")
-	name := r.Header.Get("X-Authentik-Name")
-	if name == "" {
-		name = r.Header.Get("X-Authentik-Email")
-	}
-
-	if username == "" {
-		// Fallback to user ID 1 in development
-		var user models.User
-		if err := db.DB.Preload("Equipment").First(&user, 1).Error; err != nil {
-			// Auto-create user 1 if not exists
-			user = models.User{
-				ID:             1,
-				Username:       "devuser",
-				Name:           "Developer User",
-				GoalCalories:   2500,
-				GoalProtein:    150,
-				GoalCarbs:      250,
-				GoalFat:        80,
-				HockeyPosition: "Aanvaller",
-			}
-			db.DB.Create(&user)
-		}
-		return user
+	session, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		// Should never happen behind RequireAuth; return an empty user defensively.
+		log.Println("WARN: GetCurrentUser called without an authenticated session")
+		return models.User{}
 	}
 
 	var user models.User
-	if err := db.DB.Preload("Equipment").Where("username = ?", username).First(&user).Error; err != nil {
-		log.Printf("Auto-provisioning new user '%s' (%s)", username, name)
+	if err := db.DB.Preload("Equipment").Where("username = ?", session.Username).First(&user).Error; err != nil {
+		log.Printf("Auto-provisioning new user '%s' (%s)", session.Username, session.Name)
 		// Auto-provision user on first login
 		user = models.User{
-			Username:       username,
-			Name:           name,
+			Username:       session.Username,
+			Name:           session.Name,
 			GoalCalories:   2500,
 			GoalProtein:    150,
 			GoalCarbs:      250,

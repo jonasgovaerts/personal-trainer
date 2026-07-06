@@ -32,5 +32,27 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: GEMINI_API_KEY
+            # OIDC (Authentik) configuration
+            - name: OIDC_ISSUER
+              value: "https://authentik.jonasg.be/application/o/personal-trainer/"
+            - name: OIDC_REDIRECT_URL
+              value: "https://personal-trainer.jonasg.be/auth/callback"
+            - name: APP_BASE_URL
+              value: "https://personal-trainer.jonasg.be"
+            - name: OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: OIDC_CLIENT_ID
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: OIDC_CLIENT_SECRET
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: SESSION_SECRET
           ports:
             - containerPort: 8080

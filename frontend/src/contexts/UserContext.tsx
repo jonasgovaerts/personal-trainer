@@ -32,6 +32,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const refreshUser = async () => {
     try {
       const res = await fetch('/api/user/me');
+      if (res.status === 401) {
+        // Session missing or expired — start the OIDC login flow.
+        window.location.href = '/auth/login';
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setUser(data);

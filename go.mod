@@ -3,8 +3,11 @@ module github.com/user/personal-trainer
 go 1.25.8
 
 require (
+	github.com/coreos/go-oidc/v3 v3.19.0
 	github.com/google/generative-ai-go v0.20.1
+	github.com/gorilla/securecookie v1.1.2
 	github.com/muktihari/fit v0.28.1
+	golang.org/x/oauth2 v0.36.0
 	google.golang.org/api v0.283.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
@@ -19,6 +22,7 @@ require (
 	cloud.google.com/go/longrunning v0.5.7 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
@@ -39,7 +43,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	golang.org/x/crypto v0.51.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
