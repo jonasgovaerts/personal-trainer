@@ -13,6 +13,7 @@ interface UserProfile {
   goal_protein: number;
   goal_carbs: number;
   goal_fat: number;
+  goal_water_ml: number;
   last_weight_update: string;
   equipment: any[];
 }

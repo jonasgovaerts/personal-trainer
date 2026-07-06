@@ -109,10 +109,12 @@ export default function Nutrition() {
   const [historyLogs, setHistoryLogs] = useState<LogItem[]>([]);
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [savedMeals, setSavedMeals] = useState<any[]>([]);
+  const [waterLogs, setWaterLogs] = useState<{ id: number; ml: number }[]>([]);
+  const [mealServings, setMealServings] = useState<Record<number, number>>({});
   const [loggingMealId, setLoggingMealId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'manual' | 'ai' | 'barcode' | 'search' | 'meals'>('search');
   const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(getDefaultMealForTime());
-  const [viewMode, setViewMode] = useState<'today' | 'month'>('today');
+  const [viewMode, setViewMode] = useState<'today' | 'week' | 'month'>('today');
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // Meal Builder State
@@ -189,6 +191,13 @@ export default function Nutrition() {
       .catch(err => console.error("Failed to fetch saved meals:", err));
   };
 
+  const fetchWater = () => {
+    fetch('/api/water')
+      .then(res => res.json())
+      .then(data => setWaterLogs(Array.isArray(data) ? data : []))
+      .catch(err => console.error("Failed to fetch water:", err));
+  };
+
   const fetchWorkouts = () => {
     fetch(`/api/workouts/history?user_id=me&_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
@@ -203,18 +212,21 @@ export default function Nutrition() {
     fetchMonthLogs();
     fetchWorkouts();
     fetchSavedMeals();
+    fetchWater();
 
     // Auto-refresh every 10 seconds to keep stats and lists up to date
     const interval = setInterval(() => {
       fetchTodayLogs();
       fetchMonthLogs();
       fetchWorkouts();
+      fetchWater();
     }, 10000);
 
     const handleRefresh = () => {
       fetchTodayLogs();
       fetchMonthLogs();
       fetchWorkouts();
+      fetchWater();
     };
     window.addEventListener('refreshData', handleRefresh);
 
@@ -268,15 +280,34 @@ export default function Nutrition() {
   const remaining = goal - netConsumed;
   const progressPercent = Math.min(100, Math.max(0, (netConsumed / goal) * 100));
 
-  // Hydration variables
-  const loggedWater = logs
-    .filter(l => l.type === 'drink')
-    .reduce((sum, l) => sum + (l.portionGrams || 100), 0);
-  const waterTarget = 2000;
+  // Hydration (first-class, via /api/water)
+  const loggedWater = waterLogs.reduce((sum, l) => sum + (l.ml || 0), 0);
+  const waterTarget = user?.goal_water_ml || 2500;
   const waterProgress = Math.min(100, (loggedWater / waterTarget) * 100);
 
-  const logWater = (amount: number) => {
-    addLog('Water', 0, 0, 0, 0, 0, 'drink', undefined, amount);
+  const logWater = async (amount: number) => {
+    try {
+      const res = await fetch('/api/water', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ml: amount }),
+      });
+      if (!res.ok) throw new Error('failed');
+      fetchWater();
+    } catch (err) {
+      console.error(err);
+      toast('Error logging water', 'error');
+    }
+  };
+
+  const undoLastWater = async () => {
+    if (waterLogs.length === 0) return;
+    try {
+      await fetch(`/api/water/${waterLogs[0].id}`, { method: 'DELETE' });
+      fetchWater();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Personalized Suggestions based on past history (excluding water)
@@ -446,12 +477,26 @@ export default function Nutrition() {
 
   const logSavedMeal = async (meal: any) => {
     if (!meal.items || meal.items.length === 0 || loggingMealId) return;
+    // The meal's items represent (meal.servings) servings; scale to the chosen amount.
+    const chosen = mealServings[meal.id] ?? 1;
+    const base = meal.servings && meal.servings > 0 ? meal.servings : 1;
+    const factor = chosen / base;
     setLoggingMealId(meal.id);
     try {
       for (const item of meal.items) {
-        await addLog(item.name, item.calories, item.protein, item.carbs, item.fat, item.fiber || 0, item.type || 'food', item.barcode, item.portion_grams);
+        await addLog(
+          item.name,
+          Math.round(item.calories * factor),
+          Number((item.protein * factor).toFixed(1)),
+          Number((item.carbs * factor).toFixed(1)),
+          Number((item.fat * factor).toFixed(1)),
+          Number(((item.fiber || 0) * factor).toFixed(1)),
+          item.type || 'food',
+          item.barcode,
+          Number(((item.portion_grams || 0) * factor).toFixed(1)),
+        );
       }
-      toast(`${meal.name} logged to ${selectedMeal}!`, 'success');
+      toast(`${meal.name} (${chosen}×) logged to ${selectedMeal}!`, 'success');
     } finally {
       setLoggingMealId(null);
     }
@@ -741,6 +786,25 @@ export default function Nutrition() {
       .reduce((sum, l) => sum + l.calories, 0);
   };
 
+  // Last 7 days of nutrition, oldest → newest, for the weekly trend view.
+  const getWeekData = () => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      const dayLogs = historyLogs.filter(l => isSameDay(new Date(l.timestamp), d));
+      days.push({
+        label: format(d, 'EEE'),
+        calories: Math.round(dayLogs.reduce((s, l) => s + l.calories, 0)),
+        protein: Math.round(dayLogs.reduce((s, l) => s + (l.protein || 0), 0)),
+        carbs: Math.round(dayLogs.reduce((s, l) => s + (l.carbs || 0), 0)),
+        fat: Math.round(dayLogs.reduce((s, l) => s + (l.fat || 0), 0)),
+      });
+    }
+    return days;
+  };
+
   return (
     <Layout>
       <div className="max-w-5xl mx-auto space-y-8 pb-32">
@@ -756,13 +820,19 @@ export default function Nutrition() {
               onClick={() => setViewMode('today')}
               className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'today' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
             >
-              TODAY
+              {t('nutrition.view.today') || 'TODAY'}
+            </button>
+            <button
+              onClick={() => setViewMode('week')}
+              className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'week' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
+            >
+              {t('nutrition.view.week') || 'WEEK'}
             </button>
             <button
               onClick={() => setViewMode('month')}
               className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'month' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
             >
-              MONTHLY
+              {t('nutrition.view.month') || 'MONTHLY'}
             </button>
           </div>
         </div>
@@ -874,15 +944,20 @@ export default function Nutrition() {
                       onClick={() => logWater(250)}
                       className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl transition-all"
                     >
-                      <Plus className="w-3.5 h-3.5 text-blue-500" /> +250ml Glass
+                      <Plus className="w-3.5 h-3.5 text-blue-500" /> +250ml {t('nutrition.water.glass') || 'Glass'}
                     </button>
                     <button
                       onClick={() => logWater(500)}
                       className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl transition-all"
                     >
-                      <Plus className="w-3.5 h-3.5 text-blue-500" /> +500ml Bottle
+                      <Plus className="w-3.5 h-3.5 text-blue-500" /> +500ml {t('nutrition.water.bottle') || 'Bottle'}
                     </button>
                   </div>
+                  {waterLogs.length > 0 && (
+                    <button onClick={undoLastWater} className="mt-3 text-[10px] font-bold text-slate-500 hover:text-red-400 uppercase tracking-wider transition-colors">
+                      {t('nutrition.water.undo') || 'Undo last'}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1076,14 +1151,26 @@ export default function Nutrition() {
                                       </p>
                                     </div>
                                   </div>
-                                  <button
-                                    onClick={() => logSavedMeal(meal)}
-                                    disabled={loggingMealId !== null}
-                                    className="bg-slate-800 p-2 rounded-lg text-blue-500 hover:bg-blue-600 hover:text-white disabled:opacity-50 transition-all ml-4 shrink-0"
-                                    title={`Log to ${selectedMeal}`}
-                                  >
-                                    {loggingMealId === meal.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                  </button>
+                                  <div className="flex items-center gap-2 ml-3 shrink-0">
+                                    <input
+                                      type="number"
+                                      step="0.5"
+                                      min="0.5"
+                                      inputMode="decimal"
+                                      value={mealServings[meal.id] ?? 1}
+                                      onChange={e => setMealServings(prev => ({ ...prev, [meal.id]: parseFloat(e.target.value) || 1 }))}
+                                      title={t('nutrition.servings') || 'Servings'}
+                                      className="w-14 bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-center text-sm text-white focus:outline-none focus:border-blue-500"
+                                    />
+                                    <button
+                                      onClick={() => logSavedMeal(meal)}
+                                      disabled={loggingMealId !== null}
+                                      className="bg-slate-800 p-2 rounded-lg text-blue-500 hover:bg-blue-600 hover:text-white disabled:opacity-50 transition-all shrink-0"
+                                      title={`Log to ${selectedMeal}`}
+                                    >
+                                      {loggingMealId === meal.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                    </button>
+                                  </div>
                                 </div>
                               );
                             })}
@@ -1679,6 +1766,61 @@ export default function Nutrition() {
               })}
             </div>
           </>
+        ) : viewMode === 'week' ? (
+          /* Weekly Trend View */
+          (() => {
+            const week = getWeekData();
+            const maxCal = Math.max(goal, ...week.map(d => d.calories), 1);
+            const daysWithData = week.filter(d => d.calories > 0).length || 1;
+            const avg = {
+              calories: Math.round(week.reduce((s, d) => s + d.calories, 0) / daysWithData),
+              protein: Math.round(week.reduce((s, d) => s + d.protein, 0) / daysWithData),
+              carbs: Math.round(week.reduce((s, d) => s + d.carbs, 0) / daysWithData),
+              fat: Math.round(week.reduce((s, d) => s + d.fat, 0) / daysWithData),
+            };
+            return (
+              <div className="space-y-6">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                  <h3 className="font-semibold text-lg text-white mb-6">{t('nutrition.week.title') || 'Last 7 Days'}</h3>
+                  <div className="flex items-end justify-between gap-2 h-48">
+                    {week.map((d, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                        <span className="text-[10px] font-bold text-slate-400">{d.calories > 0 ? d.calories : ''}</span>
+                        <div
+                          className={cn("w-full rounded-t-lg transition-all", d.calories > goal ? "bg-red-500/70" : "bg-blue-500/70")}
+                          style={{ height: `${Math.max(2, (d.calories / maxCal) * 100)}%` }}
+                          title={`${d.calories} kcal`}
+                        />
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">{d.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-800 flex items-center gap-2 text-[10px] text-slate-500">
+                    <span className="w-3 h-0.5 bg-slate-600" /> {t('nutrition.week.goalLine') || 'Goal'}: {goal} kcal/day
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                  <h3 className="font-semibold text-lg text-white mb-1">{t('nutrition.week.avgTitle') || 'Daily Average'}</h3>
+                  <p className="text-xs text-slate-500 mb-5">{t('nutrition.week.avgSub') || 'Averaged over days with logged food'}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {[
+                      { label: t('profile.calories') || 'Calories', val: avg.calories, unit: 'kcal', goalV: goal, color: 'text-white' },
+                      { label: t('profile.protein') || 'Protein', val: avg.protein, unit: 'g', goalV: user?.goal_protein, color: 'text-blue-400' },
+                      { label: t('profile.carbs') || 'Carbs', val: avg.carbs, unit: 'g', goalV: user?.goal_carbs, color: 'text-orange-400' },
+                      { label: t('profile.fat') || 'Fat', val: avg.fat, unit: 'g', goalV: user?.goal_fat, color: 'text-emerald-400' },
+                    ].map((m, i) => (
+                      <div key={i} className="bg-slate-950/50 border border-slate-800 rounded-xl p-4">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">{m.label}</p>
+                        <p className={cn("text-xl font-bold", m.color)}>{m.val}<span className="text-[10px] text-slate-500 font-normal"> {m.unit}</span></p>
+                        {m.goalV ? <p className="text-[10px] text-slate-600 mt-1">/ {m.goalV} {m.unit}</p> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()
         ) : (
           /* Monthly Calendar View */
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 lg:p-8 shadow-sm overflow-x-auto no-scrollbar">

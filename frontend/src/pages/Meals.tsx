@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Utensils, Plus, Trash2, X, Apple, CupSoda, Pencil, Save } from 'lucide-react';
 import Layout from '../components/Layout';
 import FoodPicker, { PickedFoodItem } from '../components/FoodPicker';
@@ -20,6 +21,7 @@ interface MealItem {
 interface Meal {
   id: number;
   name: string;
+  servings?: number;
   items: MealItem[];
   created_at: string;
 }
@@ -33,12 +35,14 @@ const mealTotals = (items: MealItem[]) => ({
 });
 
 export default function Meals() {
+  const { t } = useTranslation();
   const { toast, confirm } = useUI();
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isBuilding, setIsBuilding] = useState(false);
   const [editingMealId, setEditingMealId] = useState<number | null>(null);
   const [mealName, setMealName] = useState('');
+  const [mealServings, setMealServings] = useState(1);
   const [builderItems, setBuilderItems] = useState<MealItem[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -56,6 +60,7 @@ export default function Meals() {
   const startNewMeal = () => {
     setEditingMealId(null);
     setMealName('');
+    setMealServings(1);
     setBuilderItems([]);
     setIsBuilding(true);
   };
@@ -63,6 +68,7 @@ export default function Meals() {
   const startEditMeal = (meal: Meal) => {
     setEditingMealId(meal.id);
     setMealName(meal.name);
+    setMealServings(meal.servings && meal.servings > 0 ? meal.servings : 1);
     setBuilderItems(meal.items.map(i => ({ ...i })));
     setIsBuilding(true);
   };
@@ -71,6 +77,7 @@ export default function Meals() {
     setIsBuilding(false);
     setEditingMealId(null);
     setMealName('');
+    setMealServings(1);
     setBuilderItems([]);
   };
 
@@ -103,6 +110,7 @@ export default function Meals() {
     try {
       const payload = {
         name: mealName.trim(),
+        servings: mealServings > 0 ? mealServings : 1,
         items: builderItems.map(({ id, ...rest }) => rest)
       };
       const res = await fetch(editingMealId ? `/api/meals/${editingMealId}` : '/api/meals', {
@@ -175,15 +183,29 @@ export default function Meals() {
               </div>
 
               <div className="p-4 space-y-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Meal name</label>
-                  <input
-                    type="text"
-                    value={mealName}
-                    onChange={e => setMealName(e.target.value)}
-                    placeholder="e.g. Protein Breakfast"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white font-bold focus:outline-none focus:border-blue-500"
-                  />
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('meals.name') || 'Meal name'}</label>
+                    <input
+                      type="text"
+                      value={mealName}
+                      onChange={e => setMealName(e.target.value)}
+                      placeholder="e.g. Protein Breakfast"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white font-bold focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="w-24">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('meals.servings') || 'Servings'}</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      inputMode="decimal"
+                      value={mealServings}
+                      onChange={e => setMealServings(parseFloat(e.target.value) || 1)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white font-bold text-center focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Target, Settings, RotateCcw, Dumbbell, Save, LogOut, Ruler, Plus, Trash2, TrendingDown, TrendingUp, Minus } from 'lucide-react';
+import { User, Target, Settings, RotateCcw, Dumbbell, Save, LogOut, Ruler, Plus, Trash2, TrendingDown, TrendingUp, Minus, LineChart as LineChartIcon, Camera, Image as ImageIcon } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
 import { useUI } from '../contexts/UIContext';
@@ -48,12 +49,60 @@ export default function Profile() {
   const [showMeasurementForm, setShowMeasurementForm] = useState(false);
   const [measurementInput, setMeasurementInput] = useState<Record<string, string>>({});
   const [savingMeasurement, setSavingMeasurement] = useState(false);
+  const [chartField, setChartField] = useState<string>('weight_kg');
+
+  // Progress photos
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [photosAvailable, setPhotosAvailable] = useState(true);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMeasurements = () => {
     fetch('/api/measurements')
       .then(res => res.json())
       .then(data => setMeasurements(Array.isArray(data) ? data : []))
       .catch(err => console.error("Failed to fetch measurements:", err));
+  };
+
+  const fetchPhotos = () => {
+    fetch('/api/photos')
+      .then(res => {
+        if (res.status === 503) { setPhotosAvailable(false); return []; }
+        setPhotosAvailable(true);
+        return res.json();
+      })
+      .then(data => setPhotos(Array.isArray(data) ? data : []))
+      .catch(err => console.error("Failed to fetch photos:", err));
+  };
+
+  const uploadPhoto = async (file: File) => {
+    setUploadingPhoto(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await fetch('/api/photos', { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('upload failed');
+      toast(t('profile.photos.uploaded') || 'Photo uploaded', 'success');
+      fetchPhotos();
+    } catch (err) {
+      console.error(err);
+      toast(t('profile.photos.error') || 'Error uploading photo', 'error');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const deletePhoto = (id: number) => {
+    confirm(t('profile.photos.deleteConfirm') || 'Delete this photo?', async () => {
+      try {
+        const res = await fetch(`/api/photos/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('delete failed');
+        setPhotos(prev => prev.filter(p => p.id !== id));
+      } catch (err) {
+        console.error(err);
+        toast(t('profile.photos.error') || 'Error', 'error');
+      }
+    });
   };
 
   const saveMeasurement = async () => {
@@ -132,7 +181,8 @@ export default function Profile() {
         calories: user.goal_calories,
         protein: user.goal_protein,
         carbs: user.goal_carbs,
-        fat: user.goal_fat
+        fat: user.goal_fat,
+        water: user.goal_water_ml
       });
     }
 
@@ -153,7 +203,17 @@ export default function Profile() {
     });
 
     fetchMeasurements();
+    fetchPhotos();
   }, []);
+
+  // Build the measurement trend series (oldest → newest) for the selected field.
+  const measurementChartData = [...measurements]
+    .reverse()
+    .filter(m => (m[chartField as keyof Measurement] as number) > 0)
+    .map(m => ({
+      date: new Date(m.timestamp).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+      value: m[chartField as keyof Measurement] as number,
+    }));
 
   const handleRetakeWizard = () => {
     localStorage.removeItem('setup_complete');
@@ -266,6 +326,10 @@ export default function Profile() {
                   <p className="text-[10px] lg:text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1">{t('profile.fat')}</p>
                   <p className="text-lg lg:text-xl font-bold text-white">{goals.fat} <span className="text-[10px] lg:text-sm font-normal text-slate-400">g</span></p>
                 </div>
+                <div>
+                  <p className="text-[10px] lg:text-xs font-bold text-cyan-400 uppercase tracking-wider mb-1">{t('profile.water') || 'Water'}</p>
+                  <p className="text-lg lg:text-xl font-bold text-white">{goals.water || 2500} <span className="text-[10px] lg:text-sm font-normal text-slate-400">ml</span></p>
+                </div>
               </div>
             </div>
 
@@ -353,6 +417,86 @@ export default function Profile() {
                 </div>
               )}
             </div>
+
+            {/* Measurement trend chart */}
+            {measurements.length >= 2 && (
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <LineChartIcon className="w-5 h-5 text-cyan-500" />
+                    {t('profile.trends') || 'Trends'}
+                  </h3>
+                  <select
+                    value={chartField}
+                    onChange={e => setChartField(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 rounded-lg py-1.5 px-3 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                  >
+                    {MEASUREMENT_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+                  </select>
+                </div>
+                {measurementChartData.length < 2 ? (
+                  <p className="text-sm text-slate-500 italic py-8 text-center">{t('profile.trendEmpty') || 'Log this measurement at least twice to see a trend.'}</p>
+                ) : (
+                  <div className="h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={measurementChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} domain={['auto', 'auto']} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '12px' }} />
+                        <Line type="monotone" dataKey="value" stroke="#06b6d4" strokeWidth={3} dot={{ r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Progress photos */}
+            {photosAvailable && (
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-pink-500" />
+                    {t('profile.photos.title') || 'Progress Photos'}
+                  </h3>
+                  <button
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={uploadingPhoto}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium py-1.5 px-4 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <Camera className="w-4 h-4" /> {uploadingPhoto ? '...' : (t('profile.photos.add') || 'Add')}
+                  </button>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); if (photoInputRef.current) photoInputRef.current.value = ''; }}
+                  />
+                </div>
+                {photos.length === 0 ? (
+                  <p className="text-sm text-slate-500 italic py-4 text-center">{t('profile.photos.empty') || 'No photos yet. Track your visual progress over time.'}</p>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {photos.map(p => (
+                      <div key={p.id} className="relative group aspect-square rounded-xl overflow-hidden border border-slate-800">
+                        <img src={p.url} alt={p.note || 'progress'} className="w-full h-full object-cover" />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                          <span className="text-[10px] font-bold text-white">{new Date(p.taken_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                        </div>
+                        <button
+                          onClick={() => deletePhoto(p.id)}
+                          className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-red-600 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
               <div className="flex justify-between items-center mb-4">
