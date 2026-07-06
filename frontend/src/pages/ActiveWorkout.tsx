@@ -148,8 +148,8 @@ export default function ActiveWorkout() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: 1,
-          notes: plan ? t(`predefined.plan.${plan.id}.name`) : 'Custom Session',
+          // Custom routines carry their own name; predefined plans use a translation key.
+          notes: plan?.name || (plan ? t(`predefined.plan.${plan.id}.name`) : 'Custom Session'),
         })
       });
 

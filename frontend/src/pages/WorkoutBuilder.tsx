@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Reorder } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { GripVertical, Plus, Search, Dumbbell, Save, Clock, Target, Trash2, Pencil, X, ClipboardList } from 'lucide-react';
+import { GripVertical, Plus, Search, Dumbbell, Save, Clock, Target, Trash2, Pencil, X, ClipboardList, PlayCircle } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useUI } from '../contexts/UIContext';
 
@@ -39,6 +40,7 @@ interface Routine {
 export default function WorkoutBuilder() {
   const { t } = useTranslation();
   const { toast, confirm } = useUI();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [exerciseLibrary, setExerciseLibrary] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,6 +168,23 @@ export default function WorkoutBuilder() {
     }
   };
 
+  const startRoutine = (routine: Routine) => {
+    // Hand off to the ActiveWorkout screen using the same "plan" shape it expects.
+    navigate('/active-workout', {
+      state: {
+        plan: {
+          id: routine.id,
+          name: routine.name,
+          exercises: routine.exercises.map(re => ({
+            name: re.exercise?.name || '',
+            sets: re.sets,
+            reps: parseInt(re.reps) || 0,
+          })),
+        }
+      }
+    });
+  };
+
   const deleteRoutine = (routine: Routine) => {
     confirm(`${t('builder.deleteConfirm') || 'Delete routine'} "${routine.name}"?`, async () => {
       try {
@@ -227,6 +246,9 @@ export default function WorkoutBuilder() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => startRoutine(routine)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5 text-xs mr-1">
+                        <PlayCircle className="w-4 h-4" /> {t('builder.start') || 'Start'}
+                      </button>
                       <button onClick={() => startEditRoutine(routine)} className="text-slate-500 hover:text-blue-500 transition-colors p-2 rounded-lg hover:bg-slate-800"><Pencil className="w-4 h-4" /></button>
                       <button onClick={() => deleteRoutine(routine)} className="text-slate-500 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-slate-800"><Trash2 className="w-4 h-4" /></button>
                     </div>
