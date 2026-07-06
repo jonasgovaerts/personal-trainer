@@ -1346,7 +1346,8 @@ export default function Nutrition() {
                             <input
                               type="number"
                               inputMode="numeric"
-                              value={verificationItem.calories}
+                              value={verificationItem.calories || ''}
+                              placeholder="0"
                               onChange={e => setVerificationItem({...verificationItem, calories: parseInt(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none"
                             />
@@ -1357,7 +1358,8 @@ export default function Nutrition() {
                               type="number"
                               step="0.1"
                               inputMode="decimal"
-                              value={verificationItem.protein}
+                              value={verificationItem.protein || ''}
+                              placeholder="0"
                               onChange={e => setVerificationItem({...verificationItem, protein: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-blue-900/30 rounded-xl p-3 text-white focus:border-blue-500 focus:outline-none"
                             />
@@ -1368,7 +1370,8 @@ export default function Nutrition() {
                               type="number"
                               step="0.1"
                               inputMode="decimal"
-                              value={verificationItem.carbs}
+                              value={verificationItem.carbs || ''}
+                              placeholder="0"
                               onChange={e => setVerificationItem({...verificationItem, carbs: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-orange-900/30 rounded-xl p-3 text-white focus:border-orange-500 focus:outline-none"
                             />
@@ -1379,7 +1382,8 @@ export default function Nutrition() {
                               type="number"
                               step="0.1"
                               inputMode="decimal"
-                              value={verificationItem.fat}
+                              value={verificationItem.fat || ''}
+                              placeholder="0"
                               onChange={e => setVerificationItem({...verificationItem, fat: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-emerald-900/30 rounded-xl p-3 text-white focus:border-emerald-500 focus:outline-none"
                             />
@@ -1390,7 +1394,8 @@ export default function Nutrition() {
                               type="number"
                               step="0.1"
                               inputMode="decimal"
-                              value={verificationItem.fiber}
+                              value={verificationItem.fiber || ''}
+                              placeholder="0"
                               onChange={e => setVerificationItem({...verificationItem, fiber: parseFloat(e.target.value) || 0})}
                               className="w-full bg-slate-900 border border-purple-900/30 rounded-xl p-3 text-white focus:border-purple-500 focus:outline-none"
                             />
