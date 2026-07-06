@@ -12,6 +12,7 @@ import (
 	"github.com/user/personal-trainer/internal/auth"
 	"github.com/user/personal-trainer/internal/db"
 	"github.com/user/personal-trainer/internal/handlers"
+	"github.com/user/personal-trainer/internal/storage"
 )
 
 func getCommitMessage() string {
@@ -41,6 +42,9 @@ func main() {
 	// Initialize OIDC (Authentik). Aborts startup if misconfigured.
 	auth.Init()
 
+	// Initialize optional S3/MinIO storage for progress photos (no-op if unconfigured).
+	storage.Init()
+
 	// Set up router
 	mux := http.NewServeMux()
 
@@ -69,7 +73,16 @@ func main() {
 	mux.HandleFunc("POST /api/workouts", handlers.CreateWorkout)
 	mux.HandleFunc("POST /api/workouts/{id}/log", handlers.LogWorkoutSet)
 	mux.HandleFunc("GET /api/workouts/history", handlers.GetWorkoutHistory)
+	mux.HandleFunc("PUT /api/workouts/{id}", handlers.UpdateWorkout)
 	mux.HandleFunc("DELETE /api/workouts/{id}", handlers.DeleteWorkout)
+
+	mux.HandleFunc("GET /api/water", handlers.GetWaterLogs)
+	mux.HandleFunc("POST /api/water", handlers.LogWater)
+	mux.HandleFunc("DELETE /api/water/{id}", handlers.DeleteWaterLog)
+
+	mux.HandleFunc("GET /api/photos", handlers.GetProgressPhotos)
+	mux.HandleFunc("POST /api/photos", handlers.UploadProgressPhoto)
+	mux.HandleFunc("DELETE /api/photos/{id}", handlers.DeleteProgressPhoto)
 
 	mux.HandleFunc("GET /api/nutrition", handlers.GetNutritionLogs)
 	mux.HandleFunc("POST /api/nutrition", handlers.LogNutrition)

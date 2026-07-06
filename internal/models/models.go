@@ -19,6 +19,7 @@ type User struct {
 	GoalProtein    int         `json:"goal_protein"`
 	GoalCarbs        int         `json:"goal_carbs"`
 	GoalFat          int         `json:"goal_fat"`
+	GoalWaterML      int         `json:"goal_water_ml"`
 	HockeyPosition   string      `json:"hockey_position" gorm:"size:50"`
 	LastWeightUpdate time.Time   `json:"last_weight_update"`
 	CreatedAt        time.Time   `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
@@ -111,6 +112,7 @@ type Meal struct {
 	ID        uint       `json:"id" gorm:"primarykey"`
 	UserID    uint       `json:"user_id" gorm:"index"`
 	Name      string     `json:"name" gorm:"not null;size:100"`
+	Servings  float64    `json:"servings" gorm:"default:1"`
 	Items     []MealItem `json:"items" gorm:"foreignKey:MealID;constraint:OnDelete:CASCADE"`
 	CreatedAt time.Time  `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
 }
@@ -128,6 +130,25 @@ type MealItem struct {
 	Fiber        float64 `json:"fiber"`
 	PortionGrams float64 `json:"portion_grams"`
 	Type         string  `json:"type" gorm:"size:20"` // 'food' or 'drink'
+}
+
+// WaterLog is a single hydration entry in millilitres.
+type WaterLog struct {
+	ID        uint      `json:"id" gorm:"primarykey"`
+	UserID    uint      `json:"user_id" gorm:"index"`
+	ML        int       `json:"ml"`
+	Timestamp time.Time `json:"timestamp" gorm:"default:CURRENT_TIMESTAMP"`
+}
+
+// ProgressPhoto is a user progress photo stored in object storage (S3/MinIO).
+type ProgressPhoto struct {
+	ID        uint      `json:"id" gorm:"primarykey"`
+	UserID    uint      `json:"user_id" gorm:"index"`
+	ObjectKey string    `json:"-" gorm:"size:255"`
+	URL       string    `json:"url" gorm:"-"` // populated at read time with a presigned URL
+	Note      string    `json:"note" gorm:"size:255"`
+	TakenAt   time.Time `json:"taken_at"`
+	CreatedAt time.Time `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
 }
 
 // BodyMeasurement represents a snapshot of the user's body measurements in cm (weight in kg).

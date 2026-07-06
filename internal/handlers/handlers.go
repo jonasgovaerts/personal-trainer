@@ -53,6 +53,7 @@ func GetCurrentUser(r *http.Request) models.User {
 			GoalProtein:    150,
 			GoalCarbs:      250,
 			GoalFat:        80,
+			GoalWaterML:    2500,
 			HockeyPosition: "Aanvaller",
 		}
 		db.DB.Create(&user)
@@ -169,6 +170,9 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 	user.GoalProtein = req.GoalProtein
 	user.GoalCarbs = req.GoalCarbs
 	user.GoalFat = req.GoalFat
+	if req.GoalWaterML > 0 {
+		user.GoalWaterML = req.GoalWaterML
+	}
 
 	if req.LastWeightUpdate.IsZero() {
 		user.LastWeightUpdate = time.Now()
@@ -430,13 +434,73 @@ func GetWorkoutHistory(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	query := db.DB.Preload("Logs.Exercise").Where("user_id = ?", userID)
+	if daysStr := r.URL.Query().Get("days"); daysStr != "" {
+		if days, err := strconv.Atoi(daysStr); err == nil && days > 0 {
+			cutoff := time.Now().AddDate(0, 0, -days)
+			query = query.Where("date >= ?", cutoff)
+		}
+	}
+
 	var workouts []models.Workout
-	db.DB.Preload("Logs.Exercise").Where("user_id = ?", userID).Order("date desc").Find(&workouts)
+	query.Order("date desc").Find(&workouts)
 
 	respondJSON(w, http.StatusOK, workouts)
 }
 
-// DeleteWorkout deletes a workout and its logs
+// UpdateWorkout updates a workout's notes and replaces its logged sets (owner-scoped).
+func UpdateWorkout(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Ongeldig sessie ID")
+		return
+	}
+
+	user := GetCurrentUser(r)
+	var workout models.Workout
+	if err := db.DB.Where("id = ? AND user_id = ?", id, user.ID).First(&workout).Error; err != nil {
+		respondError(w, http.StatusNotFound, "Sessie niet gevonden")
+		return
+	}
+
+	var req struct {
+		Notes          string              `json:"notes"`
+		CaloriesBurned int                 `json:"calories_burned"`
+		Logs           []models.WorkoutLog `json:"logs"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Ongeldige aanvraaggegevens")
+		return
+	}
+
+	workout.Notes = req.Notes
+	workout.CaloriesBurned = req.CaloriesBurned
+
+	// Replace logs wholesale.
+	if err := db.DB.Where("workout_id = ?", workout.ID).Delete(&models.WorkoutLog{}).Error; err != nil {
+		respondError(w, http.StatusInternalServerError, "Fout bij bijwerken van sets")
+		return
+	}
+	for i := range req.Logs {
+		req.Logs[i].ID = 0
+		req.Logs[i].WorkoutID = workout.ID
+	}
+	if len(req.Logs) > 0 {
+		if err := db.DB.Create(&req.Logs).Error; err != nil {
+			respondError(w, http.StatusInternalServerError, "Fout bij bijwerken van sets")
+			return
+		}
+	}
+	if err := db.DB.Save(&workout).Error; err != nil {
+		respondError(w, http.StatusInternalServerError, "Fout bij bijwerken van sessie")
+		return
+	}
+
+	db.DB.Preload("Logs.Exercise").First(&workout, workout.ID)
+	respondJSON(w, http.StatusOK, workout)
+}
+
+// DeleteWorkout deletes a workout and its logs (owner-scoped)
 func DeleteWorkout(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
@@ -445,14 +509,20 @@ func DeleteWorkout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user := GetCurrentUser(r)
+	var workout models.Workout
+	if err := db.DB.Where("id = ? AND user_id = ?", id, user.ID).First(&workout).Error; err != nil {
+		respondError(w, http.StatusNotFound, "Sessie niet gevonden")
+		return
+	}
+
 	// Delete associated logs first
-	if err := db.DB.Where("workout_id = ?", id).Delete(&models.WorkoutLog{}).Error; err != nil {
+	if err := db.DB.Where("workout_id = ?", workout.ID).Delete(&models.WorkoutLog{}).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, "Fout bij verwijderen van logs")
 		return
 	}
 
-	// Delete the workout
-	if err := db.DB.Delete(&models.Workout{}, id).Error; err != nil {
+	if err := db.DB.Delete(&workout).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, "Fout bij verwijderen van sessie")
 		return
 	}

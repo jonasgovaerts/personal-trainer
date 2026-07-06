@@ -39,6 +39,9 @@ func CreateMeal(w http.ResponseWriter, r *http.Request) {
 	user := GetCurrentUser(r)
 	req.UserID = user.ID
 	req.ID = 0
+	if req.Servings <= 0 {
+		req.Servings = 1
+	}
 	for i := range req.Items {
 		req.Items[i].ID = 0
 		req.Items[i].MealID = 0
@@ -83,6 +86,9 @@ func UpdateMeal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	meal.Name = req.Name
+	if req.Servings > 0 {
+		meal.Servings = req.Servings
+	}
 
 	// Replace items wholesale
 	if err := db.DB.Where("meal_id = ?", meal.ID).Delete(&models.MealItem{}).Error; err != nil {
