@@ -12,6 +12,7 @@ import (
 
 	"github.com/user/personal-trainer/internal/db"
 	"github.com/user/personal-trainer/internal/models"
+	"gorm.io/gorm"
 )
 
 const maxHealthBody = 20 << 20 // 20 MB
@@ -141,38 +142,77 @@ func IngestHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metricsImported := 0
+	// Aggregate metric sample points in memory per (name, day) before writing:
+	// cumulative types (qty) are summed; rate types keep min / max / mean(avg).
+	type metricAgg struct {
+		name          string
+		day           time.Time
+		units         string
+		qty           float64
+		min, max      float64
+		avgSum        float64
+		avgN          int
+		hasMin        bool
+	}
+	aggs := map[string]*metricAgg{}
 	for _, m := range payload.Data.Metrics {
 		name := strings.ToLower(strings.TrimSpace(m.Name))
 		if name == "" {
 			continue
 		}
-		isEnergy := strings.Contains(name, "energy")
+		isEnergyKJ := strings.Contains(name, "energy") && strings.EqualFold(m.Units, "kJ")
 		for _, p := range m.Data {
 			ts, ok := parseHKDate(p.Date)
 			if !ok {
 				continue
 			}
 			day := ts.Truncate(24 * time.Hour)
+			key := name + "|" + day.Format("2006-01-02")
+			a := aggs[key]
+			if a == nil {
+				a = &metricAgg{name: name, day: day, units: m.Units}
+				aggs[key] = a
+			}
 			qty := p.Qty
-			if isEnergy && strings.EqualFold(m.Units, "kJ") {
-				qty = qty * 0.239006
+			if isEnergyKJ {
+				qty *= 0.239006
 			}
-			rec := models.HealthMetric{
-				UserID: user.ID, Name: name, Date: day,
-				Min: p.Min, Max: p.Max, Avg: p.Avg, Qty: qty, Units: m.Units,
+			a.qty += qty
+			if p.Avg > 0 {
+				a.avgSum += p.Avg
+				a.avgN++
 			}
-			// Upsert on (user, name, day).
-			var existing models.HealthMetric
-			if err := db.DB.Where("user_id = ? AND name = ? AND date = ?", user.ID, name, day).First(&existing).Error; err == nil {
-				existing.Min, existing.Max, existing.Avg, existing.Qty, existing.Units = p.Min, p.Max, p.Avg, qty, m.Units
-				db.DB.Save(&existing)
-			} else {
-				db.DB.Create(&rec)
+			if p.Max > a.max {
+				a.max = p.Max
 			}
-			metricsImported++
+			if p.Min > 0 && (!a.hasMin || p.Min < a.min) {
+				a.min = p.Min
+				a.hasMin = true
+			}
 		}
 	}
+
+	// Write the aggregates in one transaction (replace existing day rows).
+	metricsImported := len(aggs)
+	db.DB.Transaction(func(tx *gorm.DB) error {
+		for _, a := range aggs {
+			avg := 0.0
+			if a.avgN > 0 {
+				avg = a.avgSum / float64(a.avgN)
+			}
+			vals := map[string]interface{}{"min": a.min, "max": a.max, "avg": avg, "qty": a.qty, "units": a.units}
+			var existing models.HealthMetric
+			if err := tx.Where("user_id = ? AND name = ? AND date = ?", user.ID, a.name, a.day).First(&existing).Error; err == nil {
+				tx.Model(&existing).Updates(vals)
+			} else {
+				tx.Create(&models.HealthMetric{
+					UserID: user.ID, Name: a.name, Date: a.day,
+					Min: a.min, Max: a.max, Avg: avg, Qty: a.qty, Units: a.units,
+				})
+			}
+		}
+		return nil
+	})
 
 	activitiesImported := 0
 	for _, wo := range payload.Data.Workouts {
