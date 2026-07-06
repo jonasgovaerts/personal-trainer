@@ -186,69 +186,161 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 // --- Exercise Handlers ---
 
-// GetExercises fetches all exercises, optionally filtered by user_id's equipment
+// GetExercises returns the global (seeded) exercises filtered by the user's available
+// equipment, plus all of the user's own custom exercises (unfiltered).
 func GetExercises(w http.ResponseWriter, r *http.Request) {
-	userIDStr := r.URL.Query().Get("user_id")
+	user := GetCurrentUser(r)
 
-	var exercises []models.Exercise
-	var user models.User
-	var hasUser bool
+	// Build the set of equipment IDs the user has, always including Bodyweight.
+	userEqMap := make(map[uint]bool)
+	for _, eq := range user.Equipment {
+		userEqMap[eq.ID] = true
+	}
+	var bwEq models.Equipment
+	if err := db.DB.Where("name = ?", "Lichaamsgewicht").First(&bwEq).Error; err == nil {
+		userEqMap[bwEq.ID] = true
+	}
 
-	if userIDStr == "me" || (userIDStr == "" && r.Header.Get("X-Authentik-Username") != "") {
-		user = GetCurrentUser(r)
-		hasUser = true
-	} else if userIDStr != "" {
-		userID, err := strconv.Atoi(userIDStr)
-		if err == nil {
-			if err := db.DB.Preload("Equipment").First(&user, userID).Error; err == nil {
-				hasUser = true
+	// Global exercises, filtered so the user has at least one required piece of equipment.
+	var globalExercises []models.Exercise
+	db.DB.Preload("Equipment").Where("user_id IS NULL").Find(&globalExercises)
+
+	exercises := make([]models.Exercise, 0, len(globalExercises))
+	for _, ex := range globalExercises {
+		if len(ex.Equipment) == 0 {
+			exercises = append(exercises, ex)
+			continue
+		}
+		for _, reqEq := range ex.Equipment {
+			if userEqMap[reqEq.ID] {
+				exercises = append(exercises, ex)
+				break
 			}
 		}
 	}
 
-	if hasUser {
-		// Get IDs of user's equipment
-		userEqMap := make(map[uint]bool)
-		for _, eq := range user.Equipment {
-			userEqMap[eq.ID] = true
-		}
-		
-		// Always assume the user has Bodyweight ("Lichaamsgewicht") available
-		var bwEq models.Equipment
-		if err := db.DB.Where("name = ?", "Lichaamsgewicht").First(&bwEq).Error; err == nil {
-			userEqMap[bwEq.ID] = true
-		}
+	// Append the user's own custom exercises unconditionally.
+	var customExercises []models.Exercise
+	db.DB.Preload("Equipment").Where("user_id = ?", user.ID).Find(&customExercises)
+	exercises = append(exercises, customExercises...)
 
-		// Fetch all exercises
-		var allExercises []models.Exercise
-		db.DB.Preload("Equipment").Find(&allExercises)
+	respondJSON(w, http.StatusOK, exercises)
+}
 
-		// Filter exercises where user has AT LEAST ONE of the valid equipment options
-		for _, ex := range allExercises {
-			if len(ex.Equipment) == 0 {
-				exercises = append(exercises, ex)
-				continue
-			}
+// exerciseRequest is the payload for creating/updating a custom exercise.
+type exerciseRequest struct {
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	HockeyBenefit string `json:"hockey_benefit"`
+	EquipmentIDs  []uint `json:"equipment_ids"`
+}
 
-			hasAny := false
-			for _, reqEq := range ex.Equipment {
-				if userEqMap[reqEq.ID] {
-					hasAny = true
-					break
-				}
-			}
-			if hasAny {
-				exercises = append(exercises, ex)
-			}
-		}
-		
-		respondJSON(w, http.StatusOK, exercises)
+// CreateExercise creates a custom exercise owned by the current user.
+func CreateExercise(w http.ResponseWriter, r *http.Request) {
+	var req exerciseRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	if req.Name == "" {
+		respondError(w, http.StatusBadRequest, "Exercise name is required")
 		return
 	}
 
-	// Default: return all exercises
-	db.DB.Preload("Equipment").Find(&exercises)
-	respondJSON(w, http.StatusOK, exercises)
+	user := GetCurrentUser(r)
+	uid := user.ID
+	exercise := models.Exercise{
+		UserID:        &uid,
+		Name:          req.Name,
+		Description:   req.Description,
+		HockeyBenefit: req.HockeyBenefit,
+	}
+	if err := db.DB.Create(&exercise).Error; err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to create exercise")
+		return
+	}
+	assignEquipment(&exercise, req.EquipmentIDs)
+
+	db.DB.Preload("Equipment").First(&exercise, exercise.ID)
+	respondJSON(w, http.StatusCreated, exercise)
+}
+
+// UpdateExercise updates a custom exercise owned by the current user. Global (seeded)
+// exercises cannot be edited.
+func UpdateExercise(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid exercise ID")
+		return
+	}
+
+	user := GetCurrentUser(r)
+	var exercise models.Exercise
+	if err := db.DB.Where("id = ? AND user_id = ?", id, user.ID).First(&exercise).Error; err != nil {
+		respondError(w, http.StatusNotFound, "Exercise not found")
+		return
+	}
+
+	var req exerciseRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	if req.Name == "" {
+		respondError(w, http.StatusBadRequest, "Exercise name is required")
+		return
+	}
+
+	exercise.Name = req.Name
+	exercise.Description = req.Description
+	exercise.HockeyBenefit = req.HockeyBenefit
+	if err := db.DB.Save(&exercise).Error; err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to update exercise")
+		return
+	}
+	assignEquipment(&exercise, req.EquipmentIDs)
+
+	db.DB.Preload("Equipment").First(&exercise, exercise.ID)
+	respondJSON(w, http.StatusOK, exercise)
+}
+
+// DeleteExercise deletes a custom exercise owned by the current user, along with any of the
+// user's routine entries that reference it.
+func DeleteExercise(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid exercise ID")
+		return
+	}
+
+	user := GetCurrentUser(r)
+	var exercise models.Exercise
+	if err := db.DB.Where("id = ? AND user_id = ?", id, user.ID).First(&exercise).Error; err != nil {
+		respondError(w, http.StatusNotFound, "Exercise not found")
+		return
+	}
+
+	// Remove references from this user's routines to avoid dangling entries.
+	db.DB.Where("exercise_id = ?", exercise.ID).Delete(&models.RoutineExercise{})
+	db.DB.Model(&exercise).Association("Equipment").Clear()
+	if err := db.DB.Delete(&exercise).Error; err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to delete exercise")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"message": "Exercise deleted successfully"})
+}
+
+// assignEquipment replaces an exercise's equipment associations with the given IDs.
+func assignEquipment(exercise *models.Exercise, equipmentIDs []uint) {
+	if equipmentIDs == nil {
+		return
+	}
+	var equipment []models.Equipment
+	if len(equipmentIDs) > 0 {
+		db.DB.Where("id IN ?", equipmentIDs).Find(&equipment)
+	}
+	db.DB.Model(exercise).Association("Equipment").Replace(equipment)
 }
 
 // GetEquipment fetches all available equipment

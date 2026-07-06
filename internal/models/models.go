@@ -33,14 +33,38 @@ type Equipment struct {
 }
 
 // Exercise represents a hockey-specific exercise.
+// UserID is nil for global (seeded) exercises and set for user-defined custom exercises.
 type Exercise struct {
 	ID            uint        `json:"id" gorm:"primarykey"`
+	UserID        *uint       `json:"user_id,omitempty" gorm:"index"`
 	Name          string      `json:"name" gorm:"not null;size:100"`
 	Description   string      `json:"description" gorm:"type:text"`
 	HockeyBenefit string      `json:"hockey_benefit" gorm:"type:text"`
 	VideoURL      string      `json:"video_url" gorm:"size:255"`
 	ImageURL      string      `json:"image_url" gorm:"size:255"`
 	Equipment     []Equipment `json:"equipment,omitempty" gorm:"many2many:exercise_equipment;"`
+}
+
+// WorkoutRoutine is a reusable, editable workout template owned by a user.
+type WorkoutRoutine struct {
+	ID        uint              `json:"id" gorm:"primarykey"`
+	UserID    uint              `json:"user_id" gorm:"index"`
+	Name      string            `json:"name" gorm:"not null;size:100"`
+	Exercises []RoutineExercise `json:"exercises" gorm:"foreignKey:RoutineID;constraint:OnDelete:CASCADE"`
+	CreatedAt time.Time         `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
+}
+
+// RoutineExercise is a single exercise entry within a WorkoutRoutine.
+// Reps is a free-form string to preserve ranges like "8-10".
+type RoutineExercise struct {
+	ID         uint     `json:"id" gorm:"primarykey"`
+	RoutineID  uint     `json:"routine_id" gorm:"index"`
+	ExerciseID uint     `json:"exercise_id"`
+	Exercise   Exercise `json:"exercise" gorm:"foreignKey:ExerciseID"`
+	Position   int      `json:"position"`
+	Sets       int      `json:"sets"`
+	Reps       string   `json:"reps" gorm:"size:50"`
+	Rest       string   `json:"rest" gorm:"size:50"`
 }
 
 // Workout represents a training session.

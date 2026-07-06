@@ -57,6 +57,14 @@ func main() {
 	mux.HandleFunc("GET /api/equipment", handlers.GetEquipment)
 	
 	mux.HandleFunc("GET /api/exercises", handlers.GetExercises)
+	mux.HandleFunc("POST /api/exercises", handlers.CreateExercise)
+	mux.HandleFunc("PUT /api/exercises/{id}", handlers.UpdateExercise)
+	mux.HandleFunc("DELETE /api/exercises/{id}", handlers.DeleteExercise)
+
+	mux.HandleFunc("GET /api/routines", handlers.GetRoutines)
+	mux.HandleFunc("POST /api/routines", handlers.CreateRoutine)
+	mux.HandleFunc("PUT /api/routines/{id}", handlers.UpdateRoutine)
+	mux.HandleFunc("DELETE /api/routines/{id}", handlers.DeleteRoutine)
 
 	mux.HandleFunc("POST /api/workouts", handlers.CreateWorkout)
 	mux.HandleFunc("POST /api/workouts/{id}/log", handlers.LogWorkoutSet)

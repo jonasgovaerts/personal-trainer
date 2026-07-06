@@ -45,6 +45,8 @@ func InitDB() {
 		&models.BodyMeasurement{},
 		&models.Meal{},
 		&models.MealItem{},
+		&models.WorkoutRoutine{},
+		&models.RoutineExercise{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to auto-migrate: %v", err)
@@ -339,7 +341,8 @@ func SeedDatabase(db *gorm.DB) {
 
 	for _, ex := range exercises {
 		var existing models.Exercise
-		if err := db.Where("name = ?", ex.Name).First(&existing).Error; err != nil {
+		// Scope to global (seeded) exercises so a user's custom exercise with the same name is not clobbered.
+		if err := db.Where("name = ? AND user_id IS NULL", ex.Name).First(&existing).Error; err != nil {
 			db.Create(&ex)
 		} else {
 			// Exercise exists, update it
