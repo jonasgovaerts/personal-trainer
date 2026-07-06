@@ -49,6 +49,8 @@ func InitDB() {
 		&models.RoutineExercise{},
 		&models.WaterLog{},
 		&models.ProgressPhoto{},
+		&models.HealthActivity{},
+		&models.HealthMetric{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to auto-migrate: %v", err)

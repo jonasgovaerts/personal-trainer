@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Trophy, Dumbbell, 
+import {
+  Trophy, Dumbbell,
   Target,
-  ArrowUpRight, ArrowDownRight
+  ArrowUpRight, ArrowDownRight, HeartPulse
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -27,6 +27,8 @@ export default function Analytics() {
   const [timeRange, setTimeRange] = useState('7d');
   const [selectedExercise, setSelectedExercise] = useState<string>('');
   const [showAllPRs, setShowAllPRs] = useState(false);
+  const [healthActivities, setHealthActivities] = useState<any[]>([]);
+  const [hrMetrics, setHrMetrics] = useState<any[]>([]);
 
   const rangeDays = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : null; // null = All
 
@@ -39,6 +41,14 @@ export default function Analytics() {
       .catch(err => {
         console.error("Failed to fetch history:", err);
       });
+    fetch('/api/health/activities')
+      .then(res => res.json())
+      .then(data => setHealthActivities(Array.isArray(data) ? data : []))
+      .catch(() => {});
+    fetch('/api/health/metrics?name=heart rate')
+      .then(res => res.json())
+      .then(data => setHrMetrics(Array.isArray(data) ? data : []))
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -406,6 +416,65 @@ export default function Analytics() {
           </div>
 
         </div>
+
+        {/* Apple Health */}
+        {(healthActivities.length > 0 || hrMetrics.length > 0) && (() => {
+          const cutoff = rangeDays === null ? 0 : Date.now() - rangeDays * 864e5;
+          const acts = healthActivities.filter(a => new Date(a.start).getTime() >= cutoff);
+          const hr = hrMetrics
+            .filter(m => new Date(m.date).getTime() >= cutoff && m.avg > 0)
+            .map(m => ({ date: format(parseISO(m.date), 'MMM d'), avg: Math.round(m.avg), max: Math.round(m.max) }));
+          return (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+              <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-5 lg:p-6 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-2 mb-6">
+                  <HeartPulse className="w-5 h-5 text-red-500" />
+                  <h3 className="font-semibold text-base lg:text-lg text-white">{t('analytics.heartRate') || 'Heart Rate'}</h3>
+                </div>
+                {hr.length < 2 ? (
+                  <p className="text-sm text-slate-500 italic py-10 text-center">{t('analytics.hrEmpty') || 'No heart-rate data for this range yet.'}</p>
+                ) : (
+                  <div className="h-56 lg:h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={hr} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} domain={['auto', 'auto']} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '12px' }} />
+                        <Legend wrapperStyle={{ fontSize: '11px' }} />
+                        <Line type="monotone" dataKey="avg" name={t('analytics.hrAvg') || 'Avg bpm'} stroke="#ef4444" strokeWidth={3} dot={false} />
+                        <Line type="monotone" dataKey="max" name={t('analytics.hrMax') || 'Max bpm'} stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 4" dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 p-5 lg:p-6 rounded-2xl shadow-sm">
+                <h3 className="font-semibold text-lg text-white mb-4">{t('analytics.activities') || 'Activities'}</h3>
+                {acts.length === 0 ? (
+                  <p className="text-sm text-slate-500 italic">{t('analytics.activitiesEmpty') || 'No imported activities in this range.'}</p>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
+                    {acts.slice(0, 30).map(a => (
+                      <div key={a.id} className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-bold text-white truncate">{a.name || 'Activity'}</span>
+                          <span className="text-[10px] text-slate-500">{format(parseISO(a.start), 'MMM d')}</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 uppercase font-bold mt-1">
+                          {Math.round(a.duration_sec / 60)}min
+                          {a.active_energy_kcal > 0 && ` • ${Math.round(a.active_energy_kcal)} kcal`}
+                          {a.avg_heart_rate > 0 && ` • ${a.avg_heart_rate}/${a.max_heart_rate} bpm`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </Layout>
   );

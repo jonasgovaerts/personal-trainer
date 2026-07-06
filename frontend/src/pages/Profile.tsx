@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Target, Settings, RotateCcw, Dumbbell, Save, LogOut, Ruler, Plus, Trash2, TrendingDown, TrendingUp, Minus, LineChart as LineChartIcon, Camera, Image as ImageIcon } from 'lucide-react';
+import { User, Target, Settings, RotateCcw, Dumbbell, Save, LogOut, Ruler, Plus, Trash2, TrendingDown, TrendingUp, Minus, LineChart as LineChartIcon, Camera, Image as ImageIcon, HeartPulse, Copy, RefreshCw } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Layout from '../components/Layout';
 import { cn } from '../lib/utils';
@@ -56,6 +56,34 @@ export default function Profile() {
   const [photosAvailable, setPhotosAvailable] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Apple Health
+  const [healthKey, setHealthKey] = useState<string>('');
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const ingestUrl = `${window.location.origin}/api/health/ingest`;
+
+  const generateHealthKey = async () => {
+    setGeneratingKey(true);
+    try {
+      const res = await fetch('/api/health/key', { method: 'POST' });
+      if (!res.ok) throw new Error('failed');
+      const data = await res.json();
+      setHealthKey(data.health_api_key);
+      toast(t('profile.health.keyGenerated') || 'New key generated', 'success');
+    } catch (err) {
+      console.error(err);
+      toast(t('profile.health.error') || 'Error generating key', 'error');
+    } finally {
+      setGeneratingKey(false);
+    }
+  };
+
+  const copyText = (text: string) => {
+    navigator.clipboard?.writeText(text).then(
+      () => toast(t('profile.health.copied') || 'Copied', 'success'),
+      () => {}
+    );
+  };
 
   const fetchMeasurements = () => {
     fetch('/api/measurements')
@@ -168,6 +196,7 @@ export default function Profile() {
   useEffect(() => {
     if (user) {
       setUserName(user.name);
+      if (user.health_api_key) setHealthKey(user.health_api_key);
       setProfile({
         gender: user.gender,
         age: user.birth_date, // display as age using calculateAge
@@ -497,6 +526,47 @@ export default function Profile() {
                 )}
               </div>
             )}
+
+            {/* Apple Health */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-2">
+                <HeartPulse className="w-5 h-5 text-red-500" />
+                {t('profile.health.title') || 'Apple Health'}
+              </h3>
+              <p className="text-sm text-slate-400 mb-4">
+                {t('profile.health.desc') || "Sync workouts & heart rate from Apple Health using the 'Health Auto Export' app pointed at the endpoint below."}
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('profile.health.endpoint') || 'Endpoint URL'}</label>
+                  <div className="flex gap-2">
+                    <input readOnly value={ingestUrl} className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-300 font-mono focus:outline-none" />
+                    <button onClick={() => copyText(ingestUrl)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 rounded-xl transition-colors"><Copy className="w-4 h-4" /></button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">{t('profile.health.apiKey') || 'API Key (X-API-Key header)'}</label>
+                  <div className="flex gap-2">
+                    <input readOnly value={healthKey || (t('profile.health.noKey') || 'Not generated yet')} className="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-300 font-mono focus:outline-none truncate" />
+                    {healthKey && <button onClick={() => copyText(healthKey)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 rounded-xl transition-colors"><Copy className="w-4 h-4" /></button>}
+                    <button onClick={generateHealthKey} disabled={generatingKey} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 rounded-xl transition-colors flex items-center gap-1.5 text-xs font-bold whitespace-nowrap">
+                      <RefreshCw className={cn("w-4 h-4", generatingKey && "animate-spin")} /> {healthKey ? (t('profile.health.rotate') || 'Rotate') : (t('profile.health.generate') || 'Generate')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 bg-slate-950/50 border border-slate-800 rounded-xl p-4">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">{t('profile.health.setup') || 'Setup in Health Auto Export'}</p>
+                <ol className="text-xs text-slate-400 space-y-1 list-decimal pl-4">
+                  <li>{t('profile.health.step1') || "Install 'Health Auto Export' (App Store) → Automations → REST API."}</li>
+                  <li>{t('profile.health.step2') || 'URL = the endpoint above; Method = POST; Format = JSON.'}</li>
+                  <li>{t('profile.health.step3') || 'Add a request header X-API-Key = your key above.'}</li>
+                  <li>{t('profile.health.step4') || 'Select Workouts + Heart Rate + Active Energy; set a daily automation.'}</li>
+                </ol>
+              </div>
+            </div>
 
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-sm">
               <div className="flex justify-between items-center mb-4">

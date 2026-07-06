@@ -20,6 +20,7 @@ type User struct {
 	GoalCarbs        int         `json:"goal_carbs"`
 	GoalFat          int         `json:"goal_fat"`
 	GoalWaterML      int         `json:"goal_water_ml"`
+	HealthAPIKey     string      `json:"health_api_key,omitempty" gorm:"index;size:80"`
 	HockeyPosition   string      `json:"hockey_position" gorm:"size:50"`
 	LastWeightUpdate time.Time   `json:"last_weight_update"`
 	CreatedAt        time.Time   `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
@@ -130,6 +131,37 @@ type MealItem struct {
 	Fiber        float64 `json:"fiber"`
 	PortionGrams float64 `json:"portion_grams"`
 	Type         string  `json:"type" gorm:"size:20"` // 'food' or 'drink'
+}
+
+// HealthActivity is a workout/activity imported from Apple Health (via Health Auto Export).
+type HealthActivity struct {
+	ID               uint      `json:"id" gorm:"primarykey"`
+	UserID           uint      `json:"user_id" gorm:"index"`
+	ExternalID       string    `json:"external_id" gorm:"index;size:120"`
+	Name             string    `json:"name" gorm:"size:100"`
+	Start            time.Time `json:"start"`
+	End              time.Time `json:"end"`
+	DurationSec      int       `json:"duration_sec"`
+	ActiveEnergyKcal float64   `json:"active_energy_kcal"`
+	TotalEnergyKcal  float64   `json:"total_energy_kcal"`
+	DistanceKM       float64   `json:"distance_km"`
+	AvgHeartRate     int       `json:"avg_heart_rate"`
+	MaxHeartRate     int       `json:"max_heart_rate"`
+	StepCount        int       `json:"step_count"`
+	CreatedAt        time.Time `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
+}
+
+// HealthMetric is a daily aggregated Apple Health metric (e.g. heart rate, active energy, steps).
+type HealthMetric struct {
+	ID     uint      `json:"id" gorm:"primarykey"`
+	UserID uint      `json:"user_id" gorm:"index"`
+	Name   string    `json:"name" gorm:"index;size:60"`
+	Date   time.Time `json:"date" gorm:"index"`
+	Min    float64   `json:"min"`
+	Max    float64   `json:"max"`
+	Avg    float64   `json:"avg"`
+	Qty    float64   `json:"qty"`
+	Units  string    `json:"units" gorm:"size:30"`
 }
 
 // WaterLog is a single hydration entry in millilitres.

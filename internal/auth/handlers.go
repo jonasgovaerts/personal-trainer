@@ -139,7 +139,9 @@ func HandleLogout(w http.ResponseWriter, r *http.Request) {
 // to the login endpoint.
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/auth/") {
+		// Public OIDC handshake routes, and the machine-to-machine health webhook
+		// (authenticated separately by API key), bypass the session requirement.
+		if strings.HasPrefix(r.URL.Path, "/auth/") || r.URL.Path == "/api/health/ingest" {
 			next.ServeHTTP(w, r)
 			return
 		}

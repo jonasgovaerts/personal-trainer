@@ -14,6 +14,7 @@ interface UserProfile {
   goal_carbs: number;
   goal_fat: number;
   goal_water_ml: number;
+  health_api_key?: string;
   last_weight_update: string;
   equipment: any[];
 }

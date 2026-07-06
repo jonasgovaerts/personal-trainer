@@ -84,6 +84,12 @@ func main() {
 	mux.HandleFunc("POST /api/photos", handlers.UploadProgressPhoto)
 	mux.HandleFunc("DELETE /api/photos/{id}", handlers.DeleteProgressPhoto)
 
+	// Apple Health (via Health Auto Export). Ingest is API-key authed and bypasses OIDC.
+	mux.HandleFunc("POST /api/health/ingest", handlers.IngestHealth)
+	mux.HandleFunc("GET /api/health/activities", handlers.GetHealthActivities)
+	mux.HandleFunc("GET /api/health/metrics", handlers.GetHealthMetrics)
+	mux.HandleFunc("POST /api/health/key", handlers.GenerateHealthKey)
+
 	mux.HandleFunc("GET /api/nutrition", handlers.GetNutritionLogs)
 	mux.HandleFunc("POST /api/nutrition", handlers.LogNutrition)
 	mux.HandleFunc("PUT /api/nutrition/{id}", handlers.UpdateNutritionLog)
