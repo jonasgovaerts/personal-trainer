@@ -35,8 +35,13 @@ func GetNutritionLogs(w http.ResponseWriter, r *http.Request) {
 		days, _ = strconv.Atoi(daysStr)
 	}
 
+	startDateParam := r.URL.Query().Get("start_date")
+	endDateParam := r.URL.Query().Get("end_date")
+
 	var logs []models.NutritionLog
-	if days > 0 {
+	if startDateParam != "" && endDateParam != "" {
+		db.DB.Where("user_id = ? AND DATE(timestamp) >= ? AND DATE(timestamp) <= ?", userID, startDateParam, endDateParam).Order("timestamp desc").Find(&logs)
+	} else if days > 0 {
 		startDate := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
 		db.DB.Where("user_id = ? AND DATE(timestamp) >= ?", userID, startDate).Order("timestamp desc").Find(&logs)
 	} else {

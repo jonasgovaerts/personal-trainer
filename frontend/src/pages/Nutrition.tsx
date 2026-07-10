@@ -117,6 +117,7 @@ export default function Nutrition() {
   const [selectedMeal, setSelectedMeal] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(getDefaultMealForTime());
   const [viewMode, setViewMode] = useState<'today' | 'week' | 'month'>('today');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Meal Builder State
   const [stagedItems, setStagedItems] = useState<StagedItem[]>([]);
@@ -137,7 +138,7 @@ export default function Nutrition() {
 
   // Fetch today's logs
   const fetchTodayLogs = () => {
-    const localDate = format(new Date(), 'yyyy-MM-dd');
+    const localDate = format(selectedDate, 'yyyy-MM-dd');
     fetch(`/api/nutrition?user_id=me&date=${localDate}&_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
@@ -163,7 +164,14 @@ export default function Nutrition() {
 
   // Fetch month's logs
   const fetchMonthLogs = () => {
-    fetch(`/api/nutrition?user_id=me&days=31&_t=${Date.now()}`, { cache: 'no-store' })
+    const start = startOfMonth(currentMonth);
+    const startDate = new Date(start);
+    startDate.setDate(startDate.getDate() - 10); // go back 10 days before start of month to cover weekly charts
+    
+    const startStr = format(startDate, 'yyyy-MM-dd');
+    const endStr = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+
+    fetch(`/api/nutrition?user_id=me&start_date=${startStr}&end_date=${endStr}&_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data && Array.isArray(data)) {
@@ -219,8 +227,6 @@ export default function Nutrition() {
   };
 
   useEffect(() => {
-    fetchTodayLogs();
-    fetchMonthLogs();
     fetchWorkouts();
     fetchHealthActivities();
     fetchSavedMeals();
@@ -249,6 +255,14 @@ export default function Nutrition() {
       window.removeEventListener('refreshData', handleRefresh);
     };
   }, []);
+
+  useEffect(() => {
+    fetchTodayLogs();
+  }, [selectedDate]);
+
+  useEffect(() => {
+    fetchMonthLogs();
+  }, [currentMonth]);
   
   // Manual Entry State
   const [manualName, setManualName] = useState('');
@@ -279,13 +293,13 @@ export default function Nutrition() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Calculate today's burned calories from workouts
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const activeDateStr = format(selectedDate, 'yyyy-MM-dd');
   const workoutBurned = workouts
-    .filter(w => format(new Date(w.date), 'yyyy-MM-dd') === todayStr)
+    .filter(w => format(new Date(w.date), 'yyyy-MM-dd') === activeDateStr)
     .reduce((sum, item) => sum + (item.calories_burned || 0), 0);
 
   const healthBurned = healthActivities
-    .filter(ha => format(parseISO(ha.start), 'yyyy-MM-dd') === todayStr)
+    .filter(ha => format(parseISO(ha.start), 'yyyy-MM-dd') === activeDateStr)
     .reduce((sum, item) => sum + (item.active_energy_kcal || 0), 0);
 
   const burnedCals = Math.round(workoutBurned + healthBurned);
@@ -430,6 +444,13 @@ export default function Nutrition() {
     };
   }, [cameraStream]);
 
+  const getLogTimestamp = () => {
+    const now = new Date();
+    const logDate = new Date(selectedDate);
+    logDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+    return logDate.toISOString();
+  };
+
   const addLog = async (name: string, calories: number, protein: number, carbs: number, fat: number, fiber: number, type: 'food' | 'drink' = 'food', barcode?: string, portionGrams?: number) => {
     try {
       const res = await fetch('/api/nutrition', {
@@ -446,7 +467,8 @@ export default function Nutrition() {
           fiber,
           portion_grams: portionGrams,
           type,
-          meal: selectedMeal
+          meal: selectedMeal,
+          timestamp: getLogTimestamp()
         })
       });
 
@@ -806,6 +828,30 @@ export default function Nutrition() {
       .reduce((sum, l) => sum + l.calories, 0);
   };
 
+  const getSelectedDateLabel = () => {
+    if (isToday(selectedDate)) {
+      return 'Today';
+    }
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (isSameDay(selectedDate, yesterday)) {
+      return 'Yesterday';
+    }
+    return format(selectedDate, 'EEEE, d MMMM yyyy');
+  };
+
+  const handlePrevDay = () => {
+    const prev = new Date(selectedDate);
+    prev.setDate(prev.getDate() - 1);
+    setSelectedDate(prev);
+  };
+
+  const handleNextDay = () => {
+    const next = new Date(selectedDate);
+    next.setDate(next.getDate() + 1);
+    setSelectedDate(next);
+  };
+
   // Last 7 days of nutrition, oldest → newest, for the weekly trend view.
   const getWeekData = () => {
     const days = [];
@@ -859,6 +905,44 @@ export default function Nutrition() {
 
         {viewMode === 'today' ? (
           <>
+            {/* Date Selector Navigation Bar */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+              <button 
+                onClick={handlePrevDay}
+                className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              
+              <div className="flex flex-col items-center">
+                <span className="text-sm font-bold text-white uppercase tracking-wider">
+                  {getSelectedDateLabel()}
+                </span>
+                {!isToday(selectedDate) && (
+                  <span className="text-[10px] text-slate-400 mt-0.5 font-semibold">
+                    {format(selectedDate, 'yyyy-MM-dd')}
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex gap-2">
+                {!isToday(selectedDate) && (
+                  <button 
+                    onClick={() => setSelectedDate(new Date())}
+                    className="px-3 py-1 text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-blue-400 rounded-lg uppercase tracking-wider transition-colors flex items-center gap-1"
+                  >
+                    Today
+                  </button>
+                )}
+                <button 
+                  onClick={handleNextDay}
+                  disabled={isToday(selectedDate)}
+                  className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
             {/* Dashboard Top */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="space-y-6">
