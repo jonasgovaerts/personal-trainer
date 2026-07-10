@@ -28,6 +28,7 @@ export default function Dashboard() {
   const { toast } = useUI();
   const [history, setHistory] = useState<any[]>([]);
   const [nutritionLogs, setNutritionLogs] = useState<any[]>([]);
+  const [healthActivities, setHealthActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showWeightPrompt, setShowWeightPrompt] = useState(false);
@@ -41,11 +42,13 @@ export default function Dashboard() {
   const fetchDashboardData = () => {
     Promise.all([
       fetch(`/api/workouts/history?user_id=me&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()),
-      fetch(`/api/nutrition?user_id=me&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json())
+      fetch(`/api/nutrition?user_id=me&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()),
+      fetch(`/api/health/activities?_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json())
     ])
-    .then(([workoutsData, nutritionData]) => {
+    .then(([workoutsData, nutritionData, healthData]) => {
       setHistory(Array.isArray(workoutsData) ? workoutsData : []);
       setNutritionLogs(Array.isArray(nutritionData) ? nutritionData : []);
+      setHealthActivities(Array.isArray(healthData) ? healthData : []);
       setLoading(false);
     })
     .catch(err => {
@@ -160,11 +163,19 @@ export default function Dashboard() {
 
   // Calculate today's nutrition & workouts expenditure
   const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const burnedCals = Array.isArray(history) 
+  const workoutBurned = Array.isArray(history) 
     ? history
         .filter(w => format(parseISO(w.date), 'yyyy-MM-dd') === todayStr)
         .reduce((sum, item) => sum + (item.calories_burned || 0), 0) 
     : 0;
+
+  const healthBurned = Array.isArray(healthActivities)
+    ? healthActivities
+        .filter(ha => format(parseISO(ha.start), 'yyyy-MM-dd') === todayStr)
+        .reduce((sum, item) => sum + (item.active_energy_kcal || 0), 0)
+    : 0;
+
+  const burnedCals = Math.round(workoutBurned + healthBurned);
 
   const consumedCals = Array.isArray(nutritionLogs) ? nutritionLogs.reduce((sum, item) => sum + (item.calories || 0), 0) : 0;
   const netConsumedCals = Math.max(0, consumedCals - burnedCals);

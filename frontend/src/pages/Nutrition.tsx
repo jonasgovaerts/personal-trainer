@@ -10,7 +10,7 @@ import { useUI } from '../contexts/UIContext';
 import { useUser } from '../contexts/UserContext';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, 
-  isSameDay, isToday, subMonths, addMonths 
+  isSameDay, isToday, subMonths, addMonths, parseISO
 } from 'date-fns';
 import { Html5Qrcode } from "html5-qrcode";
 
@@ -108,6 +108,7 @@ export default function Nutrition() {
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [historyLogs, setHistoryLogs] = useState<LogItem[]>([]);
   const [workouts, setWorkouts] = useState<any[]>([]);
+  const [healthActivities, setHealthActivities] = useState<any[]>([]);
   const [savedMeals, setSavedMeals] = useState<any[]>([]);
   const [waterLogs, setWaterLogs] = useState<{ id: number; ml: number }[]>([]);
   const [mealServings, setMealServings] = useState<Record<number, number>>({});
@@ -207,10 +208,20 @@ export default function Nutrition() {
       .catch(err => console.error("Failed to fetch workouts:", err));
   };
 
+  const fetchHealthActivities = () => {
+    fetch(`/api/health/activities?_t=${Date.now()}`, { cache: 'no-store' })
+      .then(res => res.json())
+      .then(data => {
+        setHealthActivities(Array.isArray(data) ? data : []);
+      })
+      .catch(err => console.error("Failed to fetch health activities:", err));
+  };
+
   useEffect(() => {
     fetchTodayLogs();
     fetchMonthLogs();
     fetchWorkouts();
+    fetchHealthActivities();
     fetchSavedMeals();
     fetchWater();
 
@@ -219,6 +230,7 @@ export default function Nutrition() {
       fetchTodayLogs();
       fetchMonthLogs();
       fetchWorkouts();
+      fetchHealthActivities();
       fetchWater();
     }, 10000);
 
@@ -226,6 +238,7 @@ export default function Nutrition() {
       fetchTodayLogs();
       fetchMonthLogs();
       fetchWorkouts();
+      fetchHealthActivities();
       fetchWater();
     };
     window.addEventListener('refreshData', handleRefresh);
@@ -266,9 +279,15 @@ export default function Nutrition() {
 
   // Calculate today's burned calories from workouts
   const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const burnedCals = workouts
+  const workoutBurned = workouts
     .filter(w => format(new Date(w.date), 'yyyy-MM-dd') === todayStr)
     .reduce((sum, item) => sum + (item.calories_burned || 0), 0);
+
+  const healthBurned = healthActivities
+    .filter(ha => format(parseISO(ha.start), 'yyyy-MM-dd') === todayStr)
+    .reduce((sum, item) => sum + (item.active_energy_kcal || 0), 0);
+
+  const burnedCals = Math.round(workoutBurned + healthBurned);
 
   const consumed = logs.reduce((sum, item) => sum + item.calories, 0);
   const consumedP = Number(logs.reduce((sum, item) => sum + item.protein, 0).toFixed(2));

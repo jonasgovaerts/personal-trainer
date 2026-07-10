@@ -345,6 +345,12 @@ func getUserProgressContext(userID uint) string {
 		burnedCalories += w.CaloriesBurned
 	}
 
+	var healthActivities []models.HealthActivity
+	db.DB.Where("user_id = ? AND DATE(start) = ?", userID, today).Find(&healthActivities)
+	for _, ha := range healthActivities {
+		burnedCalories += int(ha.ActiveEnergyKcal)
+	}
+
 	netConsumed := consumedCalories - burnedCalories
 	if netConsumed < 0 {
 		netConsumed = 0

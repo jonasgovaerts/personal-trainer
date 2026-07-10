@@ -118,6 +118,48 @@ func toKM(v hkValue) float64 {
 	}
 }
 
+func isDuplicateActivity(a, b models.HealthActivity) bool {
+	// 1. Start times within 2 minutes
+	timeDiff := a.Start.Sub(b.Start)
+	if timeDiff < 0 {
+		timeDiff = -timeDiff
+	}
+	if timeDiff > 2*time.Minute {
+		return false
+	}
+
+	// 2. Durations within 10 seconds
+	durDiff := a.DurationSec - b.DurationSec
+	if durDiff < 0 {
+		durDiff = -durDiff
+	}
+	if durDiff > 10 {
+		return false
+	}
+
+	// 3. Distance within 0.05 km
+	distDiff := a.DistanceKM - b.DistanceKM
+	if distDiff < 0 {
+		distDiff = -distDiff
+	}
+	if distDiff > 0.05 {
+		return false
+	}
+
+	// 4. If both have heart rate > 0, avg heart rate within 3 bpm
+	if a.AvgHeartRate > 0 && b.AvgHeartRate > 0 {
+		hrDiff := a.AvgHeartRate - b.AvgHeartRate
+		if hrDiff < 0 {
+			hrDiff = -hrDiff
+		}
+		if hrDiff > 3 {
+			return false
+		}
+	}
+
+	return true
+}
+
 // IngestHealth accepts a Health Auto Export JSON POST authenticated by X-API-Key.
 func IngestHealth(w http.ResponseWriter, r *http.Request) {
 	key := r.Header.Get("X-API-Key")
@@ -214,7 +256,8 @@ func IngestHealth(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 
-	activitiesImported := 0
+	// Parse incoming activities
+	var incoming []models.HealthActivity
 	for _, wo := range payload.Data.Workouts {
 		start, ok := parseHKDate(wo.Start)
 		if !ok {
@@ -224,11 +267,6 @@ func IngestHealth(w http.ResponseWriter, r *http.Request) {
 		ext := wo.ID
 		if ext == "" {
 			ext = fmt.Sprintf("%s|%s", wo.Start, wo.Name)
-		}
-
-		var existing models.HealthActivity
-		if err := db.DB.Where("user_id = ? AND external_id = ?", user.ID, ext).First(&existing).Error; err == nil {
-			continue // already imported — skip (idempotent)
 		}
 
 		activity := models.HealthActivity{
@@ -245,8 +283,63 @@ func IngestHealth(w http.ResponseWriter, r *http.Request) {
 			MaxHeartRate:     int(wo.MaxHeartRate.Qty),
 			StepCount:        int(wo.StepCount.Qty),
 		}
-		if err := db.DB.Create(&activity).Error; err == nil {
-			activitiesImported++
+		incoming = append(incoming, activity)
+	}
+
+	// Deduplicate inside payload (keep lowest calorie one)
+	var deduplicatedIncoming []models.HealthActivity
+	for _, inc := range incoming {
+		foundIdx := -1
+		for idx, existingInc := range deduplicatedIncoming {
+			if isDuplicateActivity(inc, existingInc) {
+				foundIdx = idx
+				break
+			}
+		}
+
+		if foundIdx >= 0 {
+			if inc.ActiveEnergyKcal < deduplicatedIncoming[foundIdx].ActiveEnergyKcal {
+				deduplicatedIncoming[foundIdx] = inc
+			}
+		} else {
+			deduplicatedIncoming = append(deduplicatedIncoming, inc)
+		}
+	}
+
+	activitiesImported := 0
+	for _, act := range deduplicatedIncoming {
+		// 1. Check exact ExternalID first (fast, ID match)
+		var exactExisting models.HealthActivity
+		if err := db.DB.Where("user_id = ? AND external_id = ?", user.ID, act.ExternalID).First(&exactExisting).Error; err == nil {
+			if act.ActiveEnergyKcal < exactExisting.ActiveEnergyKcal {
+				exactExisting.ActiveEnergyKcal = act.ActiveEnergyKcal
+				exactExisting.TotalEnergyKcal = act.TotalEnergyKcal
+				db.DB.Save(&exactExisting)
+			}
+			continue
+		}
+
+		// 2. Check duplicate activities within a 1-hour window of the start time
+		var potentialDupes []models.HealthActivity
+		db.DB.Where("user_id = ? AND start >= ? AND start <= ?", user.ID, act.Start.Add(-1*time.Hour), act.Start.Add(1*time.Hour)).Find(&potentialDupes)
+
+		isDupe := false
+		for _, dbDupe := range potentialDupes {
+			if isDuplicateActivity(act, dbDupe) {
+				isDupe = true
+				if act.ActiveEnergyKcal < dbDupe.ActiveEnergyKcal {
+					dbDupe.ActiveEnergyKcal = act.ActiveEnergyKcal
+					dbDupe.TotalEnergyKcal = act.TotalEnergyKcal
+					db.DB.Save(&dbDupe)
+				}
+				break
+			}
+		}
+
+		if !isDupe {
+			if err := db.DB.Create(&act).Error; err == nil {
+				activitiesImported++
+			}
 		}
 	}
 
