@@ -202,7 +202,8 @@ export default function Nutrition() {
   };
 
   const fetchWater = () => {
-    fetch('/api/water')
+    const localDate = format(selectedDate, 'yyyy-MM-dd');
+    fetch(`/api/water?date=${localDate}`)
       .then(res => res.json())
       .then(data => setWaterLogs(Array.isArray(data) ? data : []))
       .catch(err => console.error("Failed to fetch water:", err));
@@ -258,6 +259,7 @@ export default function Nutrition() {
 
   useEffect(() => {
     fetchTodayLogs();
+    fetchWater();
   }, [selectedDate]);
 
   useEffect(() => {
@@ -324,7 +326,7 @@ export default function Nutrition() {
       const res = await fetch('/api/water', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ml: amount }),
+        body: JSON.stringify({ ml: amount, timestamp: getLogTimestamp() }),
       });
       if (!res.ok) throw new Error('failed');
       fetchWater();

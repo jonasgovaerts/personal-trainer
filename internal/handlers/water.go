@@ -11,20 +11,26 @@ import (
 )
 
 // GetWaterLogs returns the current user's hydration entries, newest first.
-// Optional ?days=N limits to the last N days (default 1 = today).
 func GetWaterLogs(w http.ResponseWriter, r *http.Request) {
 	user := GetCurrentUser(r)
 
-	days := 1
-	if d := r.URL.Query().Get("days"); d != "" {
-		if v, err := strconv.Atoi(d); err == nil && v > 0 {
-			days = v
-		}
-	}
-	cutoff := time.Now().AddDate(0, 0, -days).Truncate(24 * time.Hour)
+	dateParam := r.URL.Query().Get("date")
+	daysStr := r.URL.Query().Get("days")
 
 	var logs []models.WaterLog
-	db.DB.Where("user_id = ? AND timestamp >= ?", user.ID, cutoff).Order("timestamp desc").Find(&logs)
+	if dateParam != "" {
+		db.DB.Where("user_id = ? AND DATE(timestamp) = ?", user.ID, dateParam).Order("timestamp desc").Find(&logs)
+	} else if daysStr != "" {
+		days := 1
+		if v, err := strconv.Atoi(daysStr); err == nil && v > 0 {
+			days = v
+		}
+		cutoff := time.Now().AddDate(0, 0, -days).Truncate(24 * time.Hour)
+		db.DB.Where("user_id = ? AND timestamp >= ?", user.ID, cutoff).Order("timestamp desc").Find(&logs)
+	} else {
+		today := time.Now().Format("2006-01-02")
+		db.DB.Where("user_id = ? AND DATE(timestamp) = ?", user.ID, today).Order("timestamp desc").Find(&logs)
+	}
 
 	respondJSON(w, http.StatusOK, logs)
 }
