@@ -40,9 +40,10 @@ export default function Dashboard() {
   const fatGoal = user?.goal_fat || 80;
 
   const fetchDashboardData = () => {
+    const localDate = format(new Date(), 'yyyy-MM-dd');
     Promise.all([
       fetch(`/api/workouts/history?user_id=me&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()),
-      fetch(`/api/nutrition?user_id=me&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()),
+      fetch(`/api/nutrition?user_id=me&date=${localDate}&_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()),
       fetch(`/api/health/activities?_t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json())
     ])
     .then(([workoutsData, nutritionData, healthData]) => {

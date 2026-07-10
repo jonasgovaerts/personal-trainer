@@ -137,7 +137,8 @@ export default function Nutrition() {
 
   // Fetch today's logs
   const fetchTodayLogs = () => {
-    fetch(`/api/nutrition?user_id=me&_t=${Date.now()}`, { cache: 'no-store' })
+    const localDate = format(new Date(), 'yyyy-MM-dd');
+    fetch(`/api/nutrition?user_id=me&date=${localDate}&_t=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         if (data && Array.isArray(data)) {

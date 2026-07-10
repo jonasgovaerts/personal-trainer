@@ -40,7 +40,10 @@ func GetNutritionLogs(w http.ResponseWriter, r *http.Request) {
 		startDate := time.Now().AddDate(0, 0, -days).Format("2006-01-02")
 		db.DB.Where("user_id = ? AND DATE(timestamp) >= ?", userID, startDate).Order("timestamp desc").Find(&logs)
 	} else {
-		today := time.Now().Format("2006-01-02")
+		today := r.URL.Query().Get("date")
+		if today == "" {
+			today = time.Now().Format("2006-01-02")
+		}
 		db.DB.Where("user_id = ? AND DATE(timestamp) = ?", userID, today).Order("timestamp desc").Find(&logs)
 	}
 
