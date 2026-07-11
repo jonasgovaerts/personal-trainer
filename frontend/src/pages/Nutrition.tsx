@@ -830,6 +830,20 @@ export default function Nutrition() {
       .reduce((sum, l) => sum + l.calories, 0);
   };
 
+  const getDayBurnedCalories = (date: Date) => {
+    const dayStr = format(date, 'yyyy-MM-dd');
+
+    const workoutBurned = workouts
+      .filter(w => format(new Date(w.date), 'yyyy-MM-dd') === dayStr)
+      .reduce((sum, item) => sum + (item.calories_burned || 0), 0);
+
+    const healthBurned = healthActivities
+      .filter(ha => format(parseISO(ha.start), 'yyyy-MM-dd') === dayStr)
+      .reduce((sum, item) => sum + (item.active_energy_kcal || 0), 0);
+
+    return Math.round(workoutBurned + healthBurned);
+  };
+
   const getSelectedDateLabel = () => {
     if (isToday(selectedDate)) {
       return 'Today';
@@ -1954,7 +1968,9 @@ export default function Nutrition() {
 
               {monthDays.map(day => {
                 const dayCals = getDayCalories(day);
-                const isUnder = dayCals > 0 && dayCals <= goal;
+                const dayBurned = getDayBurnedCalories(day);
+                const netCals = Math.max(0, dayCals - dayBurned);
+                const isUnder = dayCals > 0 && netCals <= goal;
                 const hasData = dayCals > 0;
 
                 return (
@@ -1976,8 +1992,13 @@ export default function Nutrition() {
                           "px-1 py-0.5 rounded text-[8px] lg:text-[10px] font-bold text-center leading-none",
                           isUnder ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
                         )}>
-                          {dayCals}
+                          {netCals}
                         </div>
+                        {dayBurned > 0 && (
+                          <div className="text-[7px] lg:text-[8px] text-orange-400 font-bold text-center leading-none">
+                            🔥 -{dayBurned}
+                          </div>
+                        )}
                         <div className="flex justify-center">
                            <div className={cn("w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full", isUnder ? "bg-emerald-500" : "bg-red-500")} />
                         </div>
