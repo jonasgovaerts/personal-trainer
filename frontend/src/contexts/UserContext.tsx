@@ -3,6 +3,8 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 interface UserProfile {
   id: number;
   name: string;
+  username?: string;
+  hockey_position?: string;
   gender: string;
   birth_date: string;
   height: number;

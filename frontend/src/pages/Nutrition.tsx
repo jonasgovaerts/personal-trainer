@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { jsPDF } from 'jspdf';
 import {
   Camera, ScanBarcode, Plus, Apple, CupSoda, Target,
   Sparkles, Activity, X, Trash2, Calendar, ChevronLeft, ChevronRight, Search as SearchIcon, Loader2, Utensils, AlertTriangle, Check, Pencil
@@ -868,6 +869,251 @@ export default function Nutrition() {
     setSelectedDate(next);
   };
 
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = 210;
+      const pageHeight = 297;
+      let y = 15;
+
+      const addHeader = () => {
+        doc.setFillColor(30, 41, 59); // Slate 800
+        doc.rect(0, 0, pageWidth, 40, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text("PERSONAL TRAINER AI", 15, 18);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text("MONTHLY HEALTH & FITNESS REPORT", 15, 25);
+        doc.text(format(currentMonth, 'MMMM yyyy').toUpperCase(), pageWidth - 15, 22, { align: 'right' });
+        
+        doc.setFillColor(37, 99, 235); // Blue 600 line
+        doc.rect(0, 40, pageWidth, 3, 'F');
+        y = 55;
+      };
+
+      const checkPageBreak = (needed: number) => {
+        if (y + needed > pageHeight - 15) {
+          doc.addPage();
+          doc.setFillColor(30, 41, 59);
+          doc.rect(0, 0, pageWidth, 25, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.text("PERSONAL TRAINER AI", 15, 15);
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          doc.text(format(currentMonth, 'MMMM yyyy').toUpperCase(), pageWidth - 15, 15, { align: 'right' });
+          y = 35;
+        }
+      };
+
+      // PAGE 1: EXECUTIVE SUMMARY
+      addHeader();
+
+      // Card 1: User Profile
+      doc.setFillColor(248, 250, 252); // Light Slate
+      doc.rect(15, y, pageWidth - 30, 42, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(15, y, pageWidth - 30, 42, 'S');
+
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text("USER PROFILE & DAILY TARGETS", 20, y + 8);
+      doc.setDrawColor(37, 99, 235);
+      doc.line(20, y + 11, 50, y + 11);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`User: ${user?.name || user?.username || 'Guest'}`, 20, y + 18);
+      doc.text(`Position: ${user?.hockey_position || 'Ice Hockey'}`, 20, y + 24);
+      doc.text(`Calorie Target: ${goal} kcal`, 20, y + 30);
+      doc.text(`Water Target: ${user?.goal_water_ml || 2500} ml`, 20, y + 36);
+
+      doc.text(`Protein Target: ${proteinGoal}g`, 110, y + 18);
+      doc.text(`Carbs Target: ${carbsGoal}g`, 110, y + 24);
+      doc.text(`Fat Target: ${fatGoal}g`, 110, y + 30);
+      y += 52;
+
+      // Card 2: Nutrition Summary
+      const totalCal = historyLogs.reduce((s, l) => s + l.calories, 0);
+      const uniqueDays = Array.from(new Set(historyLogs.map(l => format(new Date(l.timestamp), 'yyyy-MM-dd')))).length || 1;
+      const avgCal = Math.round(totalCal / uniqueDays);
+      const avgProtein = Math.round(historyLogs.reduce((s, l) => s + (l.protein || 0), 0) / uniqueDays);
+      const avgCarbs = Math.round(historyLogs.reduce((s, l) => s + (l.carbs || 0), 0) / uniqueDays);
+      const avgFat = Math.round(historyLogs.reduce((s, l) => s + (l.fat || 0), 0) / uniqueDays);
+
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, y, pageWidth - 30, 42, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(15, y, pageWidth - 30, 42, 'S');
+
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text("MONTHLY NUTRITION SUMMARY", 20, y + 8);
+      doc.setDrawColor(16, 185, 129); // Emerald 500
+      doc.line(20, y + 11, 50, y + 11);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Total Days Logged: ${uniqueDays} days`, 20, y + 18);
+      doc.text(`Total Calories Consumed: ${totalCal} kcal`, 20, y + 24);
+      doc.text(`Avg. Daily Intake: ${avgCal} kcal / day`, 20, y + 30);
+      doc.text(`Avg. Daily Protein: ${avgProtein}g`, 110, y + 18);
+      doc.text(`Avg. Daily Carbs: ${avgCarbs}g`, 110, y + 24);
+      doc.text(`Avg. Daily Fat: ${avgFat}g`, 110, y + 30);
+      y += 52;
+
+      // Card 3: Physical Activity & Workouts
+      const monthStr = format(currentMonth, 'yyyy-MM');
+      const activeWorkouts = workouts.filter(w => format(new Date(w.date), 'yyyy-MM') === monthStr);
+      const activeHealth = healthActivities.filter(ha => format(parseISO(ha.start), 'yyyy-MM') === monthStr);
+      const totalBurned = activeHealth.reduce((s, ha) => s + (ha.active_energy_kcal || 0), 0) + 
+                          activeWorkouts.reduce((s, w) => s + (w.calories_burned || 0), 0);
+
+      doc.setFillColor(248, 250, 252);
+      doc.rect(15, y, pageWidth - 30, 36, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(15, y, pageWidth - 30, 36, 'S');
+
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text("ACTIVITY & ENERGY EXPENDITURE", 20, y + 8);
+      doc.setDrawColor(249, 115, 22); // Orange 500
+      doc.line(20, y + 11, 50, y + 11);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Completed Workouts (Logged): ${activeWorkouts.length}`, 20, y + 18);
+      doc.text(`Apple Health Activities Imported: ${activeHealth.length}`, 20, y + 24);
+      doc.text(`Total Burned Calories: ${Math.round(totalBurned)} kcal`, 110, y + 18);
+      y += 46;
+
+      // SECTION 4: WORKOUT ENTRIES (TABLE)
+      checkPageBreak(50);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.text("RECENT WORKOUT LOGS", 15, y);
+      y += 4;
+      doc.setDrawColor(30, 41, 59);
+      doc.line(15, y, pageWidth - 15, y);
+      y += 6;
+
+      // Draw Table Header
+      doc.setFillColor(30, 41, 59);
+      doc.rect(15, y, pageWidth - 30, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.text("DATE", 20, y + 5.5);
+      doc.text("ACTIVITY / WORKOUT NAME", 50, y + 5.5);
+      doc.text("CALORIES", 130, y + 5.5);
+      doc.text("DETAILS", 160, y + 5.5);
+      y += 8;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 41, 59);
+      
+      const renderWorkouts = [...activeWorkouts, ...activeHealth].sort((a,b) => {
+        const dateA = a.date ? new Date(a.date) : new Date(a.start);
+        const dateB = b.date ? new Date(b.date) : new Date(b.start);
+        return dateB.getTime() - dateA.getTime();
+      }).slice(0, 10);
+
+      if (renderWorkouts.length === 0) {
+        doc.rect(15, y, pageWidth - 30, 8, 'S');
+        doc.text("No physical activities logged in this month range.", 20, y + 5.5);
+        y += 8;
+      } else {
+        renderWorkouts.forEach(item => {
+          checkPageBreak(10);
+          doc.rect(15, y, pageWidth - 30, 8, 'S');
+          const dStr = item.date ? format(new Date(item.date), 'yyyy-MM-dd') : format(parseISO(item.start), 'yyyy-MM-dd');
+          const nameStr = item.notes ? `Workout: ${item.notes || 'Session'}` : item.name || 'Apple Health Activity';
+          const calVal = item.calories_burned || item.active_energy_kcal || 0;
+          const detailsStr = item.duration_sec ? `${Math.round(item.duration_sec / 60)} min` : item.logs ? `${item.logs.length} exercise logs` : 'Imported';
+          
+          doc.text(dStr, 20, y + 5.5);
+          doc.text(nameStr.substring(0, 40), 50, y + 5.5);
+          doc.text(`${Math.round(calVal)} kcal`, 130, y + 5.5);
+          doc.text(detailsStr.substring(0, 20), 160, y + 5.5);
+          y += 8;
+        });
+      }
+
+      // SECTION 5: TOP LOGGED FOODS (TABLE)
+      y += 10;
+      checkPageBreak(50);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59);
+      doc.text("TOP LOGGED FOOD ENTRIES", 15, y);
+      y += 4;
+      doc.setDrawColor(30, 41, 59);
+      doc.line(15, y, pageWidth - 15, y);
+      y += 6;
+
+      // Draw Table Header
+      doc.setFillColor(30, 41, 59);
+      doc.rect(15, y, pageWidth - 30, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.text("DATE", 20, y + 5.5);
+      doc.text("MEAL", 50, y + 5.5);
+      doc.text("FOOD ITEM NAME", 80, y + 5.5);
+      doc.text("CALORIES", 140, y + 5.5);
+      doc.text("P / C / F", 170, y + 5.5);
+      y += 8;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 41, 59);
+
+      const renderFoods = [...historyLogs].sort((a,b) => b.calories - a.calories).slice(0, 15);
+
+      if (renderFoods.length === 0) {
+        doc.rect(15, y, pageWidth - 30, 8, 'S');
+        doc.text("No food logs found in this month range.", 20, y + 5.5);
+        y += 8;
+      } else {
+        renderFoods.forEach(food => {
+          checkPageBreak(10);
+          doc.rect(15, y, pageWidth - 30, 8, 'S');
+          doc.text(format(new Date(food.timestamp), 'yyyy-MM-dd'), 20, y + 5.5);
+          doc.text(food.meal.toUpperCase(), 50, y + 5.5);
+          doc.text(food.name.substring(0, 30), 80, y + 5.5);
+          doc.text(`${food.calories} kcal`, 140, y + 5.5);
+          doc.text(`${Math.round(food.protein)}g / ${Math.round(food.carbs)}g / ${Math.round(food.fat)}g`, 170, y + 5.5);
+          y += 8;
+        });
+      }
+
+      // Footer page numbering
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184); // Slate 400
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth - 15, pageHeight - 10, { align: 'right' });
+        doc.text("Report generated by Personal Trainer AI - Google Gemini", 15, pageHeight - 10);
+      }
+
+      const fileName = `Health_Report_${format(currentMonth, 'yyyy_MM')}.pdf`;
+      doc.save(fileName);
+      toast("Health report PDF generated and downloaded successfully!", "success");
+    } catch (err) {
+      console.error("PDF Export Error:", err);
+      toast("Failed to generate PDF health report.", "error");
+    }
+  };
+
   // Last 7 days of nutrition, oldest → newest, for the weekly trend view.
   const getWeekData = () => {
     const days = [];
@@ -897,25 +1143,34 @@ export default function Nutrition() {
             <h1 className="text-3xl font-bold tracking-tight text-white">{t('nutrition.title')}</h1>
             <p className="text-slate-400 mt-1">{t('nutrition.subtitle')}</p>
           </div>
-          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={() => setViewMode('today')}
-              className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'today' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
+              onClick={exportToPDF}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 transition-colors shadow-lg h-9"
             >
-              {t('nutrition.view.today') || 'TODAY'}
+              <Sparkles className="w-4 h-4 text-blue-500" />
+              Export Report
             </button>
-            <button
-              onClick={() => setViewMode('week')}
-              className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'week' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
-            >
-              {t('nutrition.view.week') || 'WEEK'}
-            </button>
-            <button
-              onClick={() => setViewMode('month')}
-              className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'month' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
-            >
-              {t('nutrition.view.month') || 'MONTHLY'}
-            </button>
+            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 shrink-0">
+              <button
+                onClick={() => setViewMode('today')}
+                className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'today' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
+              >
+                {t('nutrition.view.today') || 'TODAY'}
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'week' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
+              >
+                {t('nutrition.view.week') || 'WEEK'}
+              </button>
+              <button
+                onClick={() => setViewMode('month')}
+                className={cn("px-4 py-1.5 text-xs font-bold rounded-lg transition-all", viewMode === 'month' ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300")}
+              >
+                {t('nutrition.view.month') || 'MONTHLY'}
+              </button>
+            </div>
           </div>
         </div>
 
