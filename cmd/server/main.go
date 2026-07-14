@@ -53,6 +53,9 @@ func main() {
 	mux.HandleFunc("GET /auth/callback", auth.HandleCallback)
 	mux.HandleFunc("GET /auth/logout", auth.HandleLogout)
 
+	// System routes
+	mux.HandleFunc("GET /healthz", handlers.Healthz)
+
 	// API Routes (using Go 1.22+ routing)
 	mux.HandleFunc("GET /api/user/{id}", handlers.GetUser)
 	mux.HandleFunc("PUT /api/user/{id}/profile", handlers.UpdateUserProfile)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/user/personal-trainer/internal/models"
 	"gorm.io/driver/postgres"
@@ -26,9 +27,17 @@ func InitDB() {
 
 	log.Printf("INFO: Attempting to connect to database at %s:%s", host, port)
 	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	for i := 0; i < 10; i++ {
+		DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err == nil {
+			break
+		}
+		log.Printf("WARN: Failed to connect to database (attempt %d/10): %v. Retrying in 2s...", i+1, err)
+		time.Sleep(2 * time.Second)
+	}
+
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to connect to database after 10 attempts: %v", err)
 	}
 
 	log.Println("INFO: Connected to PostgreSQL database.")
